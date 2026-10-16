@@ -1,0 +1,22 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: leave, POSTGRES_PASSWORD: leave, POSTGRES_DB: leave_dev }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U leave" --health-interval 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://leave:leave@localhost:5432/leave_dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: "rustfmt, clippy" }
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --workspace --all-targets
+      - run: cargo test --workspace
+      - run: cargo build --release
