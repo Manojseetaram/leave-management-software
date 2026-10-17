@@ -50,7 +50,10 @@ impl SmsProvider for MockSmsProvider {
             return Err("mock gateway failure".into());
         }
         let mut sent = self.sent.lock().unwrap();
-        sent.push(SentSms { to: to.to_string(), body: body.to_string() });
+        sent.push(SentSms {
+            to: to.to_string(),
+            body: body.to_string(),
+        });
         Ok(format!("mock-{}", sent.len()))
     }
 }
@@ -61,7 +64,13 @@ fn fmt_date(d: DateTime<Utc>) -> String {
 }
 
 /// SMS text. Deliberately contains no reason, destination or medical detail.
-pub fn render_message(event: &str, student: &str, register_number: &str, start: DateTime<Utc>, end: DateTime<Utc>) -> Option<String> {
+pub fn render_message(
+    event: &str,
+    student: &str,
+    register_number: &str,
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+) -> Option<String> {
     let (s, e) = (fmt_date(start), fmt_date(end));
     Some(match event {
         "request_submitted" => format!(
@@ -91,9 +100,16 @@ pub async fn process_batch(core: &Core, batch: i64) -> DomainResult<usize> {
     let count = items.len();
     for item in items {
         let outcome: Result<String, String> = async {
-            let phone = crypto::decrypt(&core.settings.phone_key, &item.phone_encrypted).map_err(|e| e.to_string())?;
-            let body = render_message(&item.event_type, &item.student_name, &item.register_number, item.start_at, item.end_at)
-                .ok_or_else(|| format!("unknown event type '{}'", item.event_type))?;
+            let phone = crypto::decrypt(&core.settings.phone_key, &item.phone_encrypted)
+                .map_err(|e| e.to_string())?;
+            let body = render_message(
+                &item.event_type,
+                &item.student_name,
+                &item.register_number,
+                item.start_at,
+                item.end_at,
+            )
+            .ok_or_else(|| format!("unknown event type '{}'", item.event_type))?;
             core.sms.send(&phone, &body).await
         }
         .await;
@@ -101,14 +117,24 @@ pub async fn process_batch(core: &Core, batch: i64) -> DomainResult<usize> {
             Ok(message_id) => notifications::mark_sent(&core.pool, item.id, &message_id).await?,
             Err(err) => {
                 tracing::warn!(notification_id = %item.id, attempt = item.attempt_count, "sms failed: {err}");
-                notifications::mark_failed(&core.pool, item.id, &err, backoff_secs(item.attempt_count)).await?
+                notifications::mark_failed(
+                    &core.pool,
+                    item.id,
+                    &err,
+                    backoff_secs(item.attempt_count),
+                )
+                .await?
             }
         }
     }
     Ok(count)
 }
 
-pub async fn list(core: &Core, actor: &Principal, page: PageParams) -> DomainResult<Paged<NotificationRecord>> {
+pub async fn list(
+    core: &Core,
+    actor: &Principal,
+    page: PageParams,
+) -> DomainResult<Paged<NotificationRecord>> {
     if !actor.can_manage_students() {
         return Err(DomainError::Forbidden);
     }
@@ -129,7 +155,14 @@ mod tests {
     #[test]
     fn submitted_message_matches_template_and_uses_ist_dates() {
         // 20:00 UTC on the 9th is already the 10th in IST.
-        let m = render_message("request_submitted", "Asha K", "1AB22IS001", d(9, 20), d(12, 4)).unwrap();
+        let m = render_message(
+            "request_submitted",
+            "Asha K",
+            "1AB22IS001",
+            d(9, 20),
+            d(12, 4),
+        )
+        .unwrap();
         assert!(m.starts_with("Dear Parent/Guardian, a leave/permission request has been submitted by Asha K (1AB22IS001)"));
         assert!(m.contains("10-01-2030 to 12-01-2030"));
         assert!(m.contains("pending HOD approval"));
@@ -137,16 +170,31 @@ mod tests {
 
     #[test]
     fn decision_messages_exist_and_unknown_events_do_not() {
-        assert!(render_message("request_approved", "A", "R", d(1, 1), d(2, 1)).unwrap().contains("has been approved"));
-        assert!(render_message("request_rejected", "A", "R", d(1, 1), d(2, 1)).unwrap().contains("was not approved"));
+        assert!(
+            render_message("request_approved", "A", "R", d(1, 1), d(2, 1))
+                .unwrap()
+                .contains("has been approved")
+        );
+        assert!(
+            render_message("request_rejected", "A", "R", d(1, 1), d(2, 1))
+                .unwrap()
+                .contains("was not approved")
+        );
         assert!(render_message("changes_requested", "A", "R", d(1, 1), d(2, 1)).is_some());
         assert!(render_message("something_else", "A", "R", d(1, 1), d(2, 1)).is_none());
     }
 
     #[test]
     fn messages_never_leak_reason_or_medical_words() {
-        for ev in ["request_submitted", "request_approved", "request_rejected", "changes_requested"] {
-            let m = render_message(ev, "A", "R", d(1, 1), d(2, 1)).unwrap().to_lowercase();
+        for ev in [
+            "request_submitted",
+            "request_approved",
+            "request_rejected",
+            "changes_requested",
+        ] {
+            let m = render_message(ev, "A", "R", d(1, 1), d(2, 1))
+                .unwrap()
+                .to_lowercase();
             assert!(!m.contains("medical") && !m.contains("certificate") && !m.contains("reason"));
         }
     }

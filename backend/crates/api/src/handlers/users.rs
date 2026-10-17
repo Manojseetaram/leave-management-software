@@ -8,5 +8,8 @@ pub async fn create(
     AuthUser(p): AuthUser,
     Json(body): Json<NewStaffUser>,
 ) -> ApiResult<(StatusCode, Json<CreatedStaff>)> {
-    Ok((StatusCode::CREATED, Json(service::users::create_staff(&core, &p, body).await?)))
+    Ok((
+        StatusCode::CREATED,
+        Json(service::users::create_staff(&core, &p, body).await?),
+    ))
 }

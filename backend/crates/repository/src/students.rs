@@ -3,7 +3,8 @@ use domain::{error::DomainResult, models::StudentRecord};
 use sqlx::PgExecutor;
 use uuid::Uuid;
 
-const SELECT: &str = "SELECT s.id, s.user_id, s.register_number, u.full_name, u.email, s.department,
+const SELECT: &str =
+    "SELECT s.id, s.user_id, s.register_number, u.full_name, u.email, s.department,
         s.semester, s.section, s.admission_year, s.status, s.created_at, s.deleted_at
     FROM students s JOIN users u ON u.id = s.user_id";
 
@@ -38,11 +39,15 @@ pub async fn get<'e>(ex: impl PgExecutor<'e>, id: Uuid) -> DomainResult<Option<S
 }
 
 /// Archived students are hidden unless `status = archived` is requested explicitly.
-const FILTER: &str = "WHERE ($1::text IS NULL OR s.register_number ILIKE $1 OR u.full_name ILIKE $1)
+const FILTER: &str =
+    "WHERE ($1::text IS NULL OR s.register_number ILIKE $1 OR u.full_name ILIKE $1)
     AND CASE WHEN $2::text IS NULL THEN s.status <> 'archived' ELSE s.status = $2 END";
 
 pub fn like_pattern(q: &str) -> String {
-    let escaped = q.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_");
+    let escaped = q
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_");
     format!("%{escaped}%")
 }
 
@@ -65,7 +70,11 @@ pub async fn list<'e>(
     .map_err(db_err)
 }
 
-pub async fn count<'e>(ex: impl PgExecutor<'e>, pattern: Option<&str>, status: Option<&str>) -> DomainResult<i64> {
+pub async fn count<'e>(
+    ex: impl PgExecutor<'e>,
+    pattern: Option<&str>,
+    status: Option<&str>,
+) -> DomainResult<i64> {
     sqlx::query_scalar::<_, i64>(&format!(
         "SELECT count(*) FROM students s JOIN users u ON u.id = s.user_id {FILTER}"
     ))
@@ -100,7 +109,11 @@ pub async fn update_fields<'e>(
     .map_err(db_err)
 }
 
-pub async fn set_archived<'e>(ex: impl PgExecutor<'e>, id: Uuid, archived: bool) -> DomainResult<()> {
+pub async fn set_archived<'e>(
+    ex: impl PgExecutor<'e>,
+    id: Uuid,
+    archived: bool,
+) -> DomainResult<()> {
     sqlx::query(
         "UPDATE students SET status = CASE WHEN $2 THEN 'archived' ELSE 'active' END,
          deleted_at = CASE WHEN $2 THEN now() ELSE NULL END, updated_at = now() WHERE id = $1",

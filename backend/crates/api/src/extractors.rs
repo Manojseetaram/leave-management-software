@@ -25,7 +25,10 @@ pub struct AuthUser(pub Principal);
 #[async_trait]
 impl FromRequestParts<AppState> for AuthUser {
     type Rejection = ApiError;
-    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
         let p = principal_from_parts(parts, state).await?;
         if p.must_change_password {
             return Err(DomainError::PasswordChangeRequired.into());
@@ -41,7 +44,10 @@ pub struct AuthUserAllowTemp(pub Principal);
 #[async_trait]
 impl FromRequestParts<AppState> for AuthUserAllowTemp {
     type Rejection = ApiError;
-    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
         Ok(AuthUserAllowTemp(principal_from_parts(parts, state).await?))
     }
 }

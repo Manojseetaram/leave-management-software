@@ -3,7 +3,9 @@ use aes_gcm::{
     Aes256Gcm, KeyInit, Nonce,
 };
 use argon2::{
-    password_hash::{rand_core::OsRng as PwOsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    password_hash::{
+        rand_core::OsRng as PwOsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
+    },
     Argon2,
 };
 use domain::error::{DomainError, DomainResult};
@@ -26,7 +28,9 @@ pub fn hash_password_sync(password: &str) -> DomainResult<String> {
 
 pub fn verify_password_sync(password: &str, hash: &str) -> bool {
     match PasswordHash::new(hash) {
-        Ok(parsed) => Argon2::default().verify_password(password.as_bytes(), &parsed).is_ok(),
+        Ok(parsed) => Argon2::default()
+            .verify_password(password.as_bytes(), &parsed)
+            .is_ok(),
         Err(_) => false,
     }
 }
@@ -63,7 +67,11 @@ pub fn hash_token(token: &str) -> Vec<u8> {
 }
 
 pub fn temporary_password() -> String {
-    rand::thread_rng().sample_iter(&Alphanumeric).take(16).map(char::from).collect()
+    rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(16)
+        .map(char::from)
+        .collect()
 }
 
 // ---- field encryption (parent phone numbers) ----
@@ -72,7 +80,9 @@ pub fn temporary_password() -> String {
 pub fn encrypt(key: &[u8; 32], plaintext: &str) -> DomainResult<Vec<u8>> {
     let cipher = Aes256Gcm::new_from_slice(key).map_err(internal)?;
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-    let mut ct = cipher.encrypt(&nonce, plaintext.as_bytes()).map_err(internal)?;
+    let mut ct = cipher
+        .encrypt(&nonce, plaintext.as_bytes())
+        .map_err(internal)?;
     let mut out = nonce.to_vec();
     out.append(&mut ct);
     Ok(out)
@@ -84,7 +94,9 @@ pub fn decrypt(key: &[u8; 32], data: &[u8]) -> DomainResult<String> {
     }
     let (nonce, ct) = data.split_at(12);
     let cipher = Aes256Gcm::new_from_slice(key).map_err(internal)?;
-    let pt = cipher.decrypt(Nonce::from_slice(nonce), ct).map_err(internal)?;
+    let pt = cipher
+        .decrypt(Nonce::from_slice(nonce), ct)
+        .map_err(internal)?;
     String::from_utf8(pt).map_err(internal)
 }
 
@@ -103,7 +115,10 @@ mod tests {
 
     #[test]
     fn same_password_gets_different_salts() {
-        assert_ne!(hash_password_sync("same-password-1").unwrap(), hash_password_sync("same-password-1").unwrap());
+        assert_ne!(
+            hash_password_sync("same-password-1").unwrap(),
+            hash_password_sync("same-password-1").unwrap()
+        );
     }
 
     #[test]
@@ -128,7 +143,11 @@ mod tests {
         let ct = encrypt(&key, "+919876543210").unwrap();
         assert!(!ct.windows(10).any(|w| w == b"9876543210"));
         assert_eq!(decrypt(&key, &ct).unwrap(), "+919876543210");
-        assert_ne!(ct, encrypt(&key, "+919876543210").unwrap(), "nonce must differ");
+        assert_ne!(
+            ct,
+            encrypt(&key, "+919876543210").unwrap(),
+            "nonce must differ"
+        );
     }
 
     #[test]

@@ -13,13 +13,26 @@ pub async fn create(
     AuthUser(p): AuthUser,
     Json(body): Json<NewParent>,
 ) -> ApiResult<(StatusCode, Json<ParentContact>)> {
-    Ok((StatusCode::CREATED, Json(service::parents::add(&core, &p, body).await?)))
+    Ok((
+        StatusCode::CREATED,
+        Json(service::parents::add(&core, &p, body).await?),
+    ))
 }
 
-pub async fn verify(State(core): State<AppState>, AuthUser(p): AuthUser, Path(id): Path<Uuid>) -> ApiResult<Json<ParentContact>> {
+pub async fn verify(
+    State(core): State<AppState>,
+    AuthUser(p): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<ParentContact>> {
     Ok(Json(service::parents::verify(&core, &p, id).await?))
 }
 
-pub async fn list_for_student(State(core): State<AppState>, AuthUser(p): AuthUser, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
-    Ok(Json(json!({ "items": service::parents::list_for_student(&core, &p, id).await? })))
+pub async fn list_for_student(
+    State(core): State<AppState>,
+    AuthUser(p): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    Ok(Json(
+        json!({ "items": service::parents::list_for_student(&core, &p, id).await? }),
+    ))
 }

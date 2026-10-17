@@ -5,6 +5,7 @@ use axum::{
     Json,
 };
 use domain::{
+    error::DomainError,
     leave::Action,
     models::{LeaveRequest, NewLeave, PageParams, Paged, UpdateLeave},
 };
@@ -31,7 +32,10 @@ pub async fn create(
     AuthUser(p): AuthUser,
     Json(body): Json<NewLeave>,
 ) -> ApiResult<(StatusCode, Json<LeaveRequest>)> {
-    Ok((StatusCode::CREATED, Json(service::leave::create(&core, &p, body).await?)))
+    Ok((
+        StatusCode::CREATED,
+        Json(service::leave::create(&core, &p, body).await?),
+    ))
 }
 
 pub async fn list(
@@ -39,11 +43,21 @@ pub async fn list(
     AuthUser(p): AuthUser,
     Query(q): Query<ListQuery>,
 ) -> ApiResult<Json<Paged<LeaveRequest>>> {
-    let filter = LeaveFilter { status: q.status, page: PageParams { page: q.page, per_page: q.per_page } };
+    let filter = LeaveFilter {
+        status: q.status,
+        page: PageParams {
+            page: q.page,
+            per_page: q.per_page,
+        },
+    };
     Ok(Json(service::leave::list(&core, &p, filter).await?))
 }
 
-pub async fn show(State(core): State<AppState>, AuthUser(p): AuthUser, Path(id): Path<Uuid>) -> ApiResult<Json<LeaveRequest>> {
+pub async fn show(
+    State(core): State<AppState>,
+    AuthUser(p): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<LeaveRequest>> {
     Ok(Json(service::leave::get(&core, &p, id).await?))
 }
 
@@ -56,13 +70,41 @@ pub async fn update(
     Ok(Json(service::leave::update(&core, &p, id, body).await?))
 }
 
-pub async fn history(State(core): State<AppState>, AuthUser(p): AuthUser, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
-    Ok(Json(json!({ "items": service::leave::history(&core, &p, id).await? })))
+pub async fn history(
+    State(core): State<AppState>,
+    AuthUser(p): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    Ok(Json(
+        json!({ "items": service::leave::history(&core, &p, id).await? }),
+    ))
 }
 
-async fn act(core: AppState, p: domain::principal::Principal, id: Uuid, action: Action, body: Option<Json<CommentBody>>) -> ApiResult<Json<LeaveRequest>> {
+async fn act(
+    core: AppState,
+    p: domain::principal::Principal,
+    id: Uuid,
+    action: Action,
+    body: Option<Json<CommentBody>>,
+) -> ApiResult<Json<LeaveRequest>> {
     let comment = body.and_then(|Json(b)| b.comment);
-    Ok(Json(service::leave::transition(&core, &p, id, action, comment).await?))
+
+    match action {
+        Action::Approve if !p.has_permission("leave:approve") => {
+            return Err(DomainError::Forbidden.into());
+        }
+        Action::Reject if !p.has_permission("leave:reject") => {
+            return Err(DomainError::Forbidden.into());
+        }
+        Action::RequestChanges if !p.has_permission("leave:request_changes") => {
+            return Err(DomainError::Forbidden.into());
+        }
+        _ => {}
+    }
+
+    Ok(Json(
+        service::leave::transition(&core, &p, id, action, comment).await?,
+    ))
 }
 
 macro_rules! action_handler {

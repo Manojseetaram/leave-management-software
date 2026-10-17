@@ -43,7 +43,10 @@ pub async fn get<'e>(ex: impl PgExecutor<'e>, id: Uuid) -> DomainResult<Option<L
 }
 
 /// Row lock: concurrent approvals serialize here, so the loser sees the new status.
-pub async fn get_for_update<'e>(ex: impl PgExecutor<'e>, id: Uuid) -> DomainResult<Option<LeaveRequest>> {
+pub async fn get_for_update<'e>(
+    ex: impl PgExecutor<'e>,
+    id: Uuid,
+) -> DomainResult<Option<LeaveRequest>> {
     sqlx::query_as::<_, LeaveRequest>(&format!(
         "SELECT {COLS} FROM leave_requests WHERE id = $1 FOR UPDATE"
     ))
@@ -53,7 +56,8 @@ pub async fn get_for_update<'e>(ex: impl PgExecutor<'e>, id: Uuid) -> DomainResu
     .map_err(db_err)
 }
 
-const LIST_FILTER: &str = "WHERE ($1::uuid IS NULL OR student_id = $1) AND ($2::text IS NULL OR status = $2)";
+const LIST_FILTER: &str =
+    "WHERE ($1::uuid IS NULL OR student_id = $1) AND ($2::text IS NULL OR status = $2)";
 
 pub async fn list<'e>(
     ex: impl PgExecutor<'e>,
@@ -75,13 +79,19 @@ pub async fn list<'e>(
     .map_err(db_err)
 }
 
-pub async fn count<'e>(ex: impl PgExecutor<'e>, student_id: Option<Uuid>, status: Option<&str>) -> DomainResult<i64> {
-    sqlx::query_scalar::<_, i64>(&format!("SELECT count(*) FROM leave_requests {LIST_FILTER}"))
-        .bind(student_id)
-        .bind(status)
-        .fetch_one(ex)
-        .await
-        .map_err(db_err)
+pub async fn count<'e>(
+    ex: impl PgExecutor<'e>,
+    student_id: Option<Uuid>,
+    status: Option<&str>,
+) -> DomainResult<i64> {
+    sqlx::query_scalar::<_, i64>(&format!(
+        "SELECT count(*) FROM leave_requests {LIST_FILTER}"
+    ))
+    .bind(student_id)
+    .bind(status)
+    .fetch_one(ex)
+    .await
+    .map_err(db_err)
 }
 
 pub async fn update_fields<'e>(
@@ -162,7 +172,10 @@ pub async fn insert_history<'e>(
     .map_err(db_err)
 }
 
-pub async fn list_history<'e>(ex: impl PgExecutor<'e>, leave_request_id: Uuid) -> DomainResult<Vec<RequestHistoryEntry>> {
+pub async fn list_history<'e>(
+    ex: impl PgExecutor<'e>,
+    leave_request_id: Uuid,
+) -> DomainResult<Vec<RequestHistoryEntry>> {
     sqlx::query_as::<_, RequestHistoryEntry>(
         "SELECT id, leave_request_id, actor_id, old_status, new_status, comment, created_at
          FROM request_history WHERE leave_request_id = $1 ORDER BY created_at, id",

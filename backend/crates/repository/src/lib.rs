@@ -4,6 +4,7 @@ pub mod audit;
 pub mod leave;
 pub mod notifications;
 pub mod parents;
+pub mod password_resets;
 pub mod sessions;
 pub mod students;
 pub mod users;
@@ -30,9 +31,16 @@ pub fn db_err(e: sqlx::Error) -> DomainError {
 }
 
 pub async fn connect(url: &str, max_connections: u32) -> Result<PgPool, sqlx::Error> {
-    PgPoolOptions::new().max_connections(max_connections).connect(url).await
+    PgPoolOptions::new()
+        .max_connections(max_connections)
+        .connect(url)
+        .await
 }
 
 pub async fn ping(pool: &PgPool) -> DomainResult<()> {
-    sqlx::query("SELECT 1").execute(pool).await.map(|_| ()).map_err(db_err)
+    sqlx::query("SELECT 1")
+        .execute(pool)
+        .await
+        .map(|_| ())
+        .map_err(db_err)
 }

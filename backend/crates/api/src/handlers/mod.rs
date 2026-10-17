@@ -5,4 +5,5 @@ pub mod leave;
 pub mod notifications;
 pub mod parents;
 pub mod students;
+pub mod students_import;
 pub mod users;

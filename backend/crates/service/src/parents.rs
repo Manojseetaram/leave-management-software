@@ -17,11 +17,28 @@ pub async fn add(core: &Core, actor: &Principal, input: NewParent) -> DomainResu
     let encrypted = crypto::encrypt(&core.settings.phone_key, &phone)?;
 
     let mut tx = core.pool.begin().await.map_err(db_err)?;
-    students::get(&mut *tx, input.student_id).await?.ok_or(DomainError::NotFound)?;
-    let parent = parents::insert(&mut *tx, input.student_id, &name, &relationship, &encrypted, input.sms_consent).await?;
+    students::get(&mut *tx, input.student_id)
+        .await?
+        .ok_or(DomainError::NotFound)?;
+    let parent = parents::insert(
+        &mut *tx,
+        input.student_id,
+        &name,
+        &relationship,
+        &encrypted,
+        input.sms_consent,
+    )
+    .await?;
     // The phone number is never written to the audit log.
-    audit::insert(&mut *tx, Some(actor.user_id), "parent.create", "parent", Some(parent.id),
-        json!({ "student_id": input.student_id, "sms_consent": input.sms_consent })).await?;
+    audit::insert(
+        &mut *tx,
+        Some(actor.user_id),
+        "parent.create",
+        "parent",
+        Some(parent.id),
+        json!({ "student_id": input.student_id, "sms_consent": input.sms_consent }),
+    )
+    .await?;
     tx.commit().await.map_err(db_err)?;
     Ok(parent)
 }
@@ -32,18 +49,34 @@ pub async fn verify(core: &Core, actor: &Principal, id: Uuid) -> DomainResult<Pa
     if !actor.can_manage_students() {
         return Err(DomainError::Forbidden);
     }
-    let parent = parents::get(&core.pool, id).await?.ok_or(DomainError::NotFound)?;
+    let parent = parents::get(&core.pool, id)
+        .await?
+        .ok_or(DomainError::NotFound)?;
     if parent.sms_consent_at.is_none() {
-        return Err(DomainError::Conflict("SMS consent must be recorded before verification".into()));
+        return Err(DomainError::Conflict(
+            "SMS consent must be recorded before verification".into(),
+        ));
     }
     let mut tx = core.pool.begin().await.map_err(db_err)?;
     let verified = parents::mark_verified(&mut *tx, id).await?;
-    audit::insert(&mut *tx, Some(actor.user_id), "parent.verify", "parent", Some(id), json!({})).await?;
+    audit::insert(
+        &mut *tx,
+        Some(actor.user_id),
+        "parent.verify",
+        "parent",
+        Some(id),
+        json!({}),
+    )
+    .await?;
     tx.commit().await.map_err(db_err)?;
     Ok(verified)
 }
 
-pub async fn list_for_student(core: &Core, actor: &Principal, student_id: Uuid) -> DomainResult<Vec<ParentContact>> {
+pub async fn list_for_student(
+    core: &Core,
+    actor: &Principal,
+    student_id: Uuid,
+) -> DomainResult<Vec<ParentContact>> {
     ensure_access(actor, student_id)?;
     parents::list_for_student(&core.pool, student_id).await
 }

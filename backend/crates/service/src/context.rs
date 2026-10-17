@@ -19,6 +19,10 @@ pub struct Core {
 
 impl Core {
     pub fn new(pool: PgPool, settings: Settings, sms: Arc<dyn SmsProvider>) -> Self {
-        Self { pool, settings: Arc::new(settings), sms }
+        Self {
+            pool,
+            settings: Arc::new(settings),
+            sms,
+        }
     }
 }

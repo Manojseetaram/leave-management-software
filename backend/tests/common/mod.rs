@@ -33,20 +33,36 @@ pub struct StudentLogin {
 impl TestApp {
     pub async fn new(pool: PgPool) -> Self {
         let sms = Arc::new(MockSmsProvider::default());
-        let settings = Settings { phone_key: [7u8; 32], session_ttl_hours: 1, sms_max_attempts: 3 };
+        let settings = Settings {
+            phone_key: [7u8; 32],
+            session_ttl_hours: 1,
+            sms_max_attempts: 3,
+        };
         let core = Core::new(pool, settings, sms.clone());
-        assert!(service::users::bootstrap_admin(&core, ADMIN_EMAIL, ADMIN_PASSWORD, "Dept Admin").await.unwrap());
+        assert!(
+            service::users::bootstrap_admin(&core, ADMIN_EMAIL, ADMIN_PASSWORD, "Dept Admin")
+                .await
+                .unwrap()
+        );
         let app = api::router::build_router(core.clone());
         Self { app, core, sms }
     }
 
-    pub async fn call(&self, method: Method, uri: &str, token: Option<&str>, body: Option<Value>) -> (StatusCode, Value) {
+    pub async fn call(
+        &self,
+        method: Method,
+        uri: &str,
+        token: Option<&str>,
+        body: Option<Value>,
+    ) -> (StatusCode, Value) {
         let mut b = Request::builder().method(method).uri(uri);
         if let Some(t) = token {
             b = b.header("authorization", format!("Bearer {t}"));
         }
         let req = match body {
-            Some(v) => b.header("content-type", "application/json").body(Body::from(v.to_string())),
+            Some(v) => b
+                .header("content-type", "application/json")
+                .body(Body::from(v.to_string())),
             None => b.body(Body::empty()),
         }
         .unwrap();
@@ -67,11 +83,22 @@ impl TestApp {
 
     /// Logs in with the temporary password, changes it, and returns a usable token.
     pub async fn onboard(&self, login: &str, temp_password: &str) -> String {
-        let (s, b) = self.call(Method::POST, "/api/v1/auth/login", None, Some(json!({"login": login, "password": temp_password}))).await;
+        let (s, b) = self
+            .call(
+                Method::POST,
+                "/api/v1/auth/login",
+                None,
+                Some(json!({"login": login, "password": temp_password})),
+            )
+            .await;
         assert_eq!(s, StatusCode::OK, "login failed: {b}");
         let token = b["token"].as_str().unwrap().to_string();
         let (s, b) = self
-            .post("/api/v1/auth/change-password", &token, json!({"current_password": temp_password, "new_password": NEW_PASSWORD}))
+            .post(
+                "/api/v1/auth/change-password",
+                &token,
+                json!({"current_password": temp_password, "new_password": NEW_PASSWORD}),
+            )
             .await;
         assert_eq!(s, StatusCode::NO_CONTENT, "change-password failed: {b}");
         token
@@ -79,11 +106,25 @@ impl TestApp {
 
     /// First call changes the bootstrap password; later calls just log in again.
     pub async fn admin_token(&self) -> String {
-        let (s, _) = self.call(Method::POST, "/api/v1/auth/login", None, Some(json!({"login": ADMIN_EMAIL, "password": ADMIN_PASSWORD}))).await;
+        let (s, _) = self
+            .call(
+                Method::POST,
+                "/api/v1/auth/login",
+                None,
+                Some(json!({"login": ADMIN_EMAIL, "password": ADMIN_PASSWORD})),
+            )
+            .await;
         if s == StatusCode::OK {
             return self.onboard(ADMIN_EMAIL, ADMIN_PASSWORD).await;
         }
-        let (s, b) = self.call(Method::POST, "/api/v1/auth/login", None, Some(json!({"login": ADMIN_EMAIL, "password": NEW_PASSWORD}))).await;
+        let (s, b) = self
+            .call(
+                Method::POST,
+                "/api/v1/auth/login",
+                None,
+                Some(json!({"login": ADMIN_EMAIL, "password": NEW_PASSWORD})),
+            )
+            .await;
         assert_eq!(s, StatusCode::OK, "{b}");
         b["token"].as_str().unwrap().to_string()
     }
@@ -91,13 +132,23 @@ impl TestApp {
     pub async fn hod_token(&self) -> String {
         let admin = self.admin_token().await;
         let (s, b) = self
-            .post("/api/v1/users", &admin, json!({"email": "hod@college.edu", "full_name": "Dr. HOD", "roles": ["hod"]}))
+            .post(
+                "/api/v1/users",
+                &admin,
+                json!({"email": "hod@college.edu", "full_name": "Dr. HOD", "roles": ["hod"]}),
+            )
             .await;
         assert_eq!(s, StatusCode::CREATED, "{b}");
-        self.onboard("hod@college.edu", b["temporary_password"].as_str().unwrap()).await
+        self.onboard("hod@college.edu", b["temporary_password"].as_str().unwrap())
+            .await
     }
 
-    pub async fn create_student(&self, staff_token: &str, register_number: &str, name: &str) -> StudentLogin {
+    pub async fn create_student(
+        &self,
+        staff_token: &str,
+        register_number: &str,
+        name: &str,
+    ) -> StudentLogin {
         let (s, b) = self
             .post(
                 "/api/v1/students",
@@ -107,12 +158,19 @@ impl TestApp {
             .await;
         assert_eq!(s, StatusCode::CREATED, "{b}");
         let id: Uuid = b["student"]["id"].as_str().unwrap().parse().unwrap();
-        let token = self.onboard(register_number, b["temporary_password"].as_str().unwrap()).await;
+        let token = self
+            .onboard(register_number, b["temporary_password"].as_str().unwrap())
+            .await;
         StudentLogin { id, token }
     }
 
     /// Adds a consenting, verified parent so SMS notifications are eligible.
-    pub async fn add_verified_parent(&self, staff_token: &str, student_id: Uuid, phone: &str) -> Uuid {
+    pub async fn add_verified_parent(
+        &self,
+        staff_token: &str,
+        student_id: Uuid,
+        phone: &str,
+    ) -> Uuid {
         let (s, b) = self
             .post(
                 "/api/v1/parents",
@@ -122,7 +180,13 @@ impl TestApp {
             .await;
         assert_eq!(s, StatusCode::CREATED, "{b}");
         let pid = b["id"].as_str().unwrap().to_string();
-        let (s, b) = self.post(&format!("/api/v1/parents/{pid}/verify"), staff_token, json!({})).await;
+        let (s, b) = self
+            .post(
+                &format!("/api/v1/parents/{pid}/verify"),
+                staff_token,
+                json!({}),
+            )
+            .await;
         assert_eq!(s, StatusCode::OK, "{b}");
         pid.parse().unwrap()
     }
@@ -139,10 +203,18 @@ impl TestApp {
 
     /// Student creates a draft and submits it; returns the request id.
     pub async fn submitted_request(&self, student_token: &str) -> String {
-        let (s, b) = self.post("/api/v1/leave-requests", student_token, Self::leave_body()).await;
+        let (s, b) = self
+            .post("/api/v1/leave-requests", student_token, Self::leave_body())
+            .await;
         assert_eq!(s, StatusCode::CREATED, "{b}");
         let id = b["id"].as_str().unwrap().to_string();
-        let (s, b) = self.post(&format!("/api/v1/leave-requests/{id}/submit"), student_token, json!({})).await;
+        let (s, b) = self
+            .post(
+                &format!("/api/v1/leave-requests/{id}/submit"),
+                student_token,
+                json!({}),
+            )
+            .await;
         assert_eq!(s, StatusCode::OK, "{b}");
         id
     }

@@ -200,9 +200,25 @@ pub struct Paged<T> {
     pub per_page: i64,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct ForgotPasswordRequest {
+    pub email: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ResetPasswordRequest {
+    pub token: String,
+    pub new_password: String,
+}
+
 impl<T> Paged<T> {
     pub fn new(items: Vec<T>, total: i64, params: PageParams) -> Self {
-        Self { items, total, page: params.page(), per_page: params.limit() }
+        Self {
+            items,
+            total,
+            page: params.page(),
+            per_page: params.limit(),
+        }
     }
 }
 
@@ -212,9 +228,15 @@ mod tests {
 
     #[test]
     fn paging_is_clamped() {
-        let p = PageParams { page: Some(0), per_page: Some(1000) };
+        let p = PageParams {
+            page: Some(0),
+            per_page: Some(1000),
+        };
         assert_eq!((p.page(), p.limit(), p.offset()), (1, 100, 0));
-        let p = PageParams { page: Some(3), per_page: Some(10) };
+        let p = PageParams {
+            page: Some(3),
+            per_page: Some(10),
+        };
         assert_eq!(p.offset(), 20);
         let p = PageParams::default();
         assert_eq!((p.page(), p.limit()), (1, 20));
