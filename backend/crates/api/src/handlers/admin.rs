@@ -18,6 +18,11 @@ pub async fn audit_logs(
     AuthUser(p): AuthUser,
     Query(q): Query<AuditQuery>,
 ) -> ApiResult<Json<Paged<AuditLogEntry>>> {
-    let page = PageParams { page: q.page, per_page: q.per_page };
-    Ok(Json(service::audit::list(&core, &p, q.entity_type.as_deref(), page).await?))
+    let page = PageParams {
+        page: q.page,
+        per_page: q.per_page,
+    };
+    Ok(Json(
+        service::audit::list(&core, &p, q.entity_type.as_deref(), page).await?,
+    ))
 }

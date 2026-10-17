@@ -142,24 +142,54 @@ mod tests {
     #[test]
     fn email_rules() {
         assert_eq!(validate_email(" A@B.edu ").unwrap(), "a@b.edu");
-        for bad in ["", "a", "a@b", "@b.com", "a@@b.com", "a b@c.com", "a@.com", "a@b."] {
+        for bad in [
+            "",
+            "a",
+            "a@b",
+            "@b.com",
+            "a@@b.com",
+            "a b@c.com",
+            "a@.com",
+            "a@b.",
+        ] {
             assert!(validate_email(bad).is_err(), "{bad}");
         }
     }
 
     #[test]
     fn register_number_rules() {
-        assert_eq!(validate_register_number(" 1ab22is001 ").unwrap(), "1AB22IS001");
+        assert_eq!(
+            validate_register_number(" 1ab22is001 ").unwrap(),
+            "1AB22IS001"
+        );
         assert!(validate_register_number("ab").is_err());
         assert!(validate_register_number("1AB-22").is_err());
     }
 
     #[test]
     fn indian_mobile_normalization() {
-        for ok in ["9876543210", "98765 43210", "+919876543210", "09876543210", "919876543210", "98765-43210"] {
-            assert_eq!(normalize_indian_mobile(ok).unwrap(), "+919876543210", "{ok}");
+        for ok in [
+            "9876543210",
+            "98765 43210",
+            "+919876543210",
+            "09876543210",
+            "919876543210",
+            "98765-43210",
+        ] {
+            assert_eq!(
+                normalize_indian_mobile(ok).unwrap(),
+                "+919876543210",
+                "{ok}"
+            );
         }
-        for bad in ["", "12345", "5876543210", "98765432101", "+449876543210", "98765abcde"] {
+        for bad in [
+            "",
+            "12345",
+            "5876543210",
+            "98765432101",
+            "+449876543210",
+            "98765abcde",
+        ] {
             assert!(normalize_indian_mobile(bad).is_err(), "{bad}");
         }
     }

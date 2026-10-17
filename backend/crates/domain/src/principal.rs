@@ -37,6 +37,7 @@ pub struct Principal {
     pub user_id: Uuid,
     pub session_id: Uuid,
     pub roles: Vec<Role>,
+    pub permissions: Vec<String>,
     pub student_id: Option<Uuid>,
     pub must_change_password: bool,
 }
@@ -46,18 +47,22 @@ impl Principal {
         self.roles.contains(&role)
     }
 
+    pub fn has_permission(&self, permission: &str) -> bool {
+        self.permissions.contains(&permission.to_string())
+    }
+
     /// HOD and department admin manage student accounts and see all requests.
     pub fn can_manage_students(&self) -> bool {
-        self.has_role(Role::Admin) || self.has_role(Role::Hod)
+        self.has_permission("students:create") || self.has_permission("students:update")
     }
 
     /// Only the HOD is the final approval authority. Faculty/admin do NOT inherit it.
     pub fn can_decide_requests(&self) -> bool {
-        self.has_role(Role::Hod)
+        self.has_permission("leave:approve")
     }
 
     pub fn can_view_audit(&self) -> bool {
-        self.has_role(Role::Admin) || self.has_role(Role::Hod)
+        self.has_permission("admin:all") || self.has_permission("reports:view")
     }
 
     pub fn owns_student(&self, student_id: Uuid) -> bool {
@@ -70,10 +75,36 @@ mod tests {
     use super::*;
 
     fn p(roles: Vec<Role>, student_id: Option<Uuid>) -> Principal {
+        let mut permissions = vec![];
+        for role in &roles {
+            match role {
+                Role::Admin => permissions.extend(vec![
+                    "students:create".to_string(),
+                    "students:update".to_string(),
+                    "students:read".to_string(),
+                    "students:restore".to_string(),
+                    "admin:all".to_string(),
+                    "reports:view".to_string(),
+                ]),
+                Role::Hod => permissions.extend(vec![
+                    "students:read".to_string(),
+                    "students:update".to_string(),
+                    "students:restore".to_string(),
+                    "leave:approve".to_string(),
+                    "leave:reject".to_string(),
+                    "leave:request_changes".to_string(),
+                    "reports:view".to_string(),
+                ]),
+                Role::Faculty => permissions.push("students:read".to_string()),
+                Role::Student => {}
+            }
+        }
+
         Principal {
             user_id: Uuid::new_v4(),
             session_id: Uuid::new_v4(),
             roles,
+            permissions,
             student_id,
             must_change_password: false,
         }

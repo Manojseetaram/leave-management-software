@@ -8,9 +8,11 @@ domain = { path = "../domain" }
 service = { path = "../service" }
 repository = { path = "../repository" }
 axum = { workspace = true }
-tower-http = { workspace = true }
+tower-http = { workspace = true, features = ["cors"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
 async-trait = { workspace = true }
 tracing = { workspace = true }
+futures = "0.3.34"
+axum-governor = "2.1.2"

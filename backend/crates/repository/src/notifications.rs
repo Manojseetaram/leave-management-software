@@ -20,7 +20,11 @@ pub struct DispatchItem {
 /// Queues one SMS per eligible parent (active + verified + consented).
 /// The dedupe key makes the call idempotent: re-running the same transition
 /// cannot create duplicate messages. Call it AFTER the history row is written.
-pub async fn enqueue_for_request<'e>(ex: impl PgExecutor<'e>, leave_request_id: Uuid, event_type: &str) -> DomainResult<u64> {
+pub async fn enqueue_for_request<'e>(
+    ex: impl PgExecutor<'e>,
+    leave_request_id: Uuid,
+    event_type: &str,
+) -> DomainResult<u64> {
     sqlx::query(
         "INSERT INTO notifications (parent_id, leave_request_id, event_type, dedupe_key)
          SELECT p.id, lr.id, $2,
@@ -40,7 +44,11 @@ pub async fn enqueue_for_request<'e>(ex: impl PgExecutor<'e>, leave_request_id: 
 
 /// Atomically claims due messages (SKIP LOCKED lets several workers run safely).
 /// A message stuck in `sending` for 5 minutes (crashed worker) becomes claimable again.
-pub async fn claim_due<'e>(ex: impl PgExecutor<'e>, batch: i64, max_attempts: i32) -> DomainResult<Vec<DispatchItem>> {
+pub async fn claim_due<'e>(
+    ex: impl PgExecutor<'e>,
+    batch: i64,
+    max_attempts: i32,
+) -> DomainResult<Vec<DispatchItem>> {
     sqlx::query_as::<_, DispatchItem>(
         "WITH due AS (
              SELECT id FROM notifications
@@ -64,7 +72,11 @@ pub async fn claim_due<'e>(ex: impl PgExecutor<'e>, batch: i64, max_attempts: i3
     .map_err(db_err)
 }
 
-pub async fn mark_sent<'e>(ex: impl PgExecutor<'e>, id: Uuid, provider_message_id: &str) -> DomainResult<()> {
+pub async fn mark_sent<'e>(
+    ex: impl PgExecutor<'e>,
+    id: Uuid,
+    provider_message_id: &str,
+) -> DomainResult<()> {
     sqlx::query(
         "UPDATE notifications SET status = 'sent', provider_message_id = $2, last_error = NULL,
          sent_at = now(), updated_at = now() WHERE id = $1",
@@ -77,7 +89,12 @@ pub async fn mark_sent<'e>(ex: impl PgExecutor<'e>, id: Uuid, provider_message_i
     .map_err(db_err)
 }
 
-pub async fn mark_failed<'e>(ex: impl PgExecutor<'e>, id: Uuid, error: &str, retry_in_secs: f64) -> DomainResult<()> {
+pub async fn mark_failed<'e>(
+    ex: impl PgExecutor<'e>,
+    id: Uuid,
+    error: &str,
+    retry_in_secs: f64,
+) -> DomainResult<()> {
     sqlx::query(
         "UPDATE notifications SET status = 'failed', last_error = $2,
          next_attempt_at = now() + make_interval(secs => $3::float8), updated_at = now()
@@ -92,7 +109,11 @@ pub async fn mark_failed<'e>(ex: impl PgExecutor<'e>, id: Uuid, error: &str, ret
     .map_err(db_err)
 }
 
-pub async fn list<'e>(ex: impl PgExecutor<'e>, limit: i64, offset: i64) -> DomainResult<Vec<NotificationRecord>> {
+pub async fn list<'e>(
+    ex: impl PgExecutor<'e>,
+    limit: i64,
+    offset: i64,
+) -> DomainResult<Vec<NotificationRecord>> {
     sqlx::query_as::<_, NotificationRecord>(
         "SELECT id, leave_request_id, event_type, channel, status, provider_message_id,
                 attempt_count, last_error, created_at, sent_at

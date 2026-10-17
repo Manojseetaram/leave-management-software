@@ -104,7 +104,10 @@ impl Action {
 
     /// Reviewer decisions (stamp decided_by / decided_at / decision_reason).
     pub fn is_decision(&self) -> bool {
-        matches!(self, Action::Approve | Action::Reject | Action::RequestChanges)
+        matches!(
+            self,
+            Action::Approve | Action::Reject | Action::RequestChanges
+        )
     }
 
     /// Parent-SMS event triggered by this action, if any.

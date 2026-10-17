@@ -17,7 +17,11 @@ pub struct CreatedStaff {
     pub temporary_password: String,
 }
 
-pub async fn create_staff(core: &Core, actor: &Principal, input: NewStaffUser) -> DomainResult<CreatedStaff> {
+pub async fn create_staff(
+    core: &Core,
+    actor: &Principal,
+    input: NewStaffUser,
+) -> DomainResult<CreatedStaff> {
     if !actor.has_role(Role::Admin) {
         return Err(DomainError::Forbidden);
     }
@@ -27,14 +31,18 @@ pub async fn create_staff(core: &Core, actor: &Principal, input: NewStaffUser) -
     for r in &input.roles {
         match Role::parse(r) {
             Some(Role::Student) | None => {
-                return Err(DomainError::Validation(format!("role '{r}' cannot be assigned here")))
+                return Err(DomainError::Validation(format!(
+                    "role '{r}' cannot be assigned here"
+                )))
             }
             Some(role) if !roles.contains(&role) => roles.push(role),
             Some(_) => {}
         }
     }
     if roles.is_empty() {
-        return Err(DomainError::Validation("at least one role is required".into()));
+        return Err(DomainError::Validation(
+            "at least one role is required".into(),
+        ));
     }
 
     let temporary_password = crypto::temporary_password();
@@ -53,13 +61,24 @@ pub async fn create_staff(core: &Core, actor: &Principal, input: NewStaffUser) -
         json!({ "roles": roles.iter().map(Role::as_str).collect::<Vec<_>>() }),
     )
     .await?;
-    let user = users::get_profile(&mut *tx, id).await?.ok_or(DomainError::NotFound)?;
+    let user = users::get_profile(&mut *tx, id)
+        .await?
+        .ok_or(DomainError::NotFound)?;
     tx.commit().await.map_err(db_err)?;
-    Ok(CreatedStaff { user, roles, temporary_password })
+    Ok(CreatedStaff {
+        user,
+        roles,
+        temporary_password,
+    })
 }
 
 /// First-run helper: creates the initial admin only if there are no users at all.
-pub async fn bootstrap_admin(core: &Core, email: &str, password: &str, full_name: &str) -> DomainResult<bool> {
+pub async fn bootstrap_admin(
+    core: &Core,
+    email: &str,
+    password: &str,
+    full_name: &str,
+) -> DomainResult<bool> {
     if users::count_users(&core.pool).await? > 0 {
         return Ok(false);
     }
@@ -69,7 +88,15 @@ pub async fn bootstrap_admin(core: &Core, email: &str, password: &str, full_name
     let mut tx = core.pool.begin().await.map_err(db_err)?;
     let id = users::insert_user(&mut *tx, Some(&email), &hash, full_name, true).await?;
     users::assign_role(&mut *tx, id, Role::Admin).await?;
-    audit::insert(&mut *tx, None, "user.bootstrap_admin", "user", Some(id), json!({})).await?;
+    audit::insert(
+        &mut *tx,
+        None,
+        "user.bootstrap_admin",
+        "user",
+        Some(id),
+        json!({}),
+    )
+    .await?;
     tx.commit().await.map_err(db_err)?;
     Ok(true)
 }

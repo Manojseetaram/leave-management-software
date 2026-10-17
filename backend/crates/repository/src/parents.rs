@@ -36,7 +36,10 @@ pub async fn get<'e>(ex: impl PgExecutor<'e>, id: Uuid) -> DomainResult<Option<P
         .map_err(db_err)
 }
 
-pub async fn list_for_student<'e>(ex: impl PgExecutor<'e>, student_id: Uuid) -> DomainResult<Vec<ParentContact>> {
+pub async fn list_for_student<'e>(
+    ex: impl PgExecutor<'e>,
+    student_id: Uuid,
+) -> DomainResult<Vec<ParentContact>> {
     sqlx::query_as::<_, ParentContact>(&format!(
         "SELECT {COLS} FROM parents WHERE student_id = $1 AND active ORDER BY created_at"
     ))

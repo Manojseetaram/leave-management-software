@@ -8,7 +8,13 @@ pub async fn live() -> Json<Value> {
 
 pub async fn ready(State(core): State<AppState>) -> (StatusCode, Json<Value>) {
     match repository::ping(&core.pool).await {
-        Ok(()) => (StatusCode::OK, Json(json!({ "status": "ready", "database": "ok" }))),
-        Err(_) => (StatusCode::SERVICE_UNAVAILABLE, Json(json!({ "status": "unavailable", "database": "down" }))),
+        Ok(()) => (
+            StatusCode::OK,
+            Json(json!({ "status": "ready", "database": "ok" })),
+        ),
+        Err(_) => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({ "status": "unavailable", "database": "down" })),
+        ),
     }
 }

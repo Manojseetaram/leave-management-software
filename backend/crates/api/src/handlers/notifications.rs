@@ -17,6 +17,9 @@ pub async fn list(
     AuthUser(p): AuthUser,
     Query(q): Query<PageQuery>,
 ) -> ApiResult<Json<Paged<NotificationRecord>>> {
-    let page = PageParams { page: q.page, per_page: q.per_page };
+    let page = PageParams {
+        page: q.page,
+        per_page: q.per_page,
+    };
     Ok(Json(service::notifications::list(&core, &p, page).await?))
 }

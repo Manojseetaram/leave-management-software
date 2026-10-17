@@ -8,6 +8,7 @@ use axum::{
     http::StatusCode,
     Json,
 };
+use domain::models::{ForgotPasswordRequest, ResetPasswordRequest};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use uuid::Uuid;
@@ -19,7 +20,10 @@ pub struct LoginBody {
     pub password: String,
 }
 
-pub async fn login(State(core): State<AppState>, Json(b): Json<LoginBody>) -> ApiResult<Json<Value>> {
+pub async fn login(
+    State(core): State<AppState>,
+    Json(b): Json<LoginBody>,
+) -> ApiResult<Json<Value>> {
     let out = service::auth::login(&core, &b.login, &b.password).await?;
     Ok(Json(json!({
         "token": out.token,
@@ -29,14 +33,22 @@ pub async fn login(State(core): State<AppState>, Json(b): Json<LoginBody>) -> Ap
     })))
 }
 
-pub async fn logout(State(core): State<AppState>, AuthUserAllowTemp(p): AuthUserAllowTemp) -> ApiResult<StatusCode> {
+pub async fn logout(
+    State(core): State<AppState>,
+    AuthUserAllowTemp(p): AuthUserAllowTemp,
+) -> ApiResult<StatusCode> {
     service::auth::logout(&core, &p).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn me(State(core): State<AppState>, AuthUserAllowTemp(p): AuthUserAllowTemp) -> ApiResult<Json<Value>> {
+pub async fn me(
+    State(core): State<AppState>,
+    AuthUserAllowTemp(p): AuthUserAllowTemp,
+) -> ApiResult<Json<Value>> {
     let user = service::auth::me(&core, &p).await?;
-    Ok(Json(json!({ "user": user, "roles": p.roles, "student_id": p.student_id })))
+    Ok(Json(
+        json!({ "user": user, "roles": p.roles, "student_id": p.student_id }),
+    ))
 }
 
 #[derive(Deserialize)]
@@ -54,11 +66,36 @@ pub async fn change_password(
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn sessions(State(core): State<AppState>, AuthUser(p): AuthUser) -> ApiResult<Json<Value>> {
-    Ok(Json(json!({ "items": service::auth::list_sessions(&core, &p).await? })))
+pub async fn sessions(
+    State(core): State<AppState>,
+    AuthUser(p): AuthUser,
+) -> ApiResult<Json<Value>> {
+    Ok(Json(
+        json!({ "items": service::auth::list_sessions(&core, &p).await? }),
+    ))
 }
 
-pub async fn revoke_session(State(core): State<AppState>, AuthUser(p): AuthUser, Path(id): Path<Uuid>) -> ApiResult<StatusCode> {
+pub async fn revoke_session(
+    State(core): State<AppState>,
+    AuthUser(p): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<StatusCode> {
     service::auth::revoke_session(&core, &p, id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn forgot_password(
+    State(core): State<AppState>,
+    Json(b): Json<ForgotPasswordRequest>,
+) -> ApiResult<StatusCode> {
+    service::auth::forgot_password(&core, b).await?;
+    Ok(StatusCode::OK)
+}
+
+pub async fn reset_password(
+    State(core): State<AppState>,
+    Json(b): Json<ResetPasswordRequest>,
+) -> ApiResult<StatusCode> {
+    service::auth::reset_password(&core, b).await?;
     Ok(StatusCode::NO_CONTENT)
 }

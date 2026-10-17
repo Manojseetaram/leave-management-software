@@ -28,7 +28,10 @@ pub async fn create(
     AuthUser(p): AuthUser,
     Json(body): Json<NewStudent>,
 ) -> ApiResult<(StatusCode, Json<CreatedStudent>)> {
-    Ok((StatusCode::CREATED, Json(service::students::create(&core, &p, body).await?)))
+    Ok((
+        StatusCode::CREATED,
+        Json(service::students::create(&core, &p, body).await?),
+    ))
 }
 
 pub async fn list(
@@ -36,11 +39,22 @@ pub async fn list(
     AuthUser(p): AuthUser,
     Query(q): Query<ListQuery>,
 ) -> ApiResult<Json<Paged<StudentRecord>>> {
-    let filter = StudentFilter { q: q.q, status: q.status, page: PageParams { page: q.page, per_page: q.per_page } };
+    let filter = StudentFilter {
+        q: q.q,
+        status: q.status,
+        page: PageParams {
+            page: q.page,
+            per_page: q.per_page,
+        },
+    };
     Ok(Json(service::students::list(&core, &p, filter).await?))
 }
 
-pub async fn show(State(core): State<AppState>, AuthUser(p): AuthUser, Path(id): Path<Uuid>) -> ApiResult<Json<StudentRecord>> {
+pub async fn show(
+    State(core): State<AppState>,
+    AuthUser(p): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<StudentRecord>> {
     Ok(Json(service::students::get(&core, &p, id).await?))
 }
 
@@ -53,16 +67,30 @@ pub async fn update(
     Ok(Json(service::students::update(&core, &p, id, body).await?))
 }
 
-pub async fn deactivate(State(core): State<AppState>, AuthUser(p): AuthUser, Path(id): Path<Uuid>) -> ApiResult<Json<StudentRecord>> {
+pub async fn deactivate(
+    State(core): State<AppState>,
+    AuthUser(p): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<StudentRecord>> {
     Ok(Json(service::students::deactivate(&core, &p, id).await?))
 }
 
-pub async fn restore(State(core): State<AppState>, AuthUser(p): AuthUser, Path(id): Path<Uuid>) -> ApiResult<Json<StudentRecord>> {
+pub async fn restore(
+    State(core): State<AppState>,
+    AuthUser(p): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<StudentRecord>> {
     Ok(Json(service::students::restore(&core, &p, id).await?))
 }
 
-pub async fn reset_password(State(core): State<AppState>, AuthUser(p): AuthUser, Path(id): Path<Uuid>) -> ApiResult<Json<CreatedStudent>> {
-    Ok(Json(service::students::reset_password(&core, &p, id).await?))
+pub async fn reset_password(
+    State(core): State<AppState>,
+    AuthUser(p): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<CreatedStudent>> {
+    Ok(Json(
+        service::students::reset_password(&core, &p, id).await?,
+    ))
 }
 
 pub async fn history(
@@ -71,6 +99,9 @@ pub async fn history(
     Path(id): Path<Uuid>,
     Query(q): Query<PageQuery>,
 ) -> ApiResult<Json<Paged<LeaveRequest>>> {
-    let page = PageParams { page: q.page, per_page: q.per_page };
+    let page = PageParams {
+        page: q.page,
+        per_page: q.per_page,
+    };
     Ok(Json(service::students::history(&core, &p, id, page).await?))
 }
