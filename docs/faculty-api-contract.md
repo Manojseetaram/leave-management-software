@@ -45,6 +45,20 @@ The result for a signed-in Faculty member:
 A Faculty member can therefore only use `/auth/*`. The Faculty console would
 render empty screens.
 
+### The console is already written against this contract
+
+The Faculty console is built and shipped: `/faculty/dashboard` (the account,
+the role and the active sessions — read from `/auth/me` and `/auth/sessions`,
+the only routes a faculty member can use today) and `/faculty/students` (the
+roster and the leave requests).
+
+The second screen is written against the two routes of section 2 and consumes
+exactly the response shapes below. While those routes are missing they answer
+404, and the screen shows an honest notice instead of an empty roster — it
+never shows a table it cannot fill, and it never offers a decision, because
+the decisions belong to the HOD. As soon as the two routes exist the console
+reads them with no frontend change.
+
 ## 2. What the frontend expects
 
 Two endpoints, under the existing `/api/v1` prefix.

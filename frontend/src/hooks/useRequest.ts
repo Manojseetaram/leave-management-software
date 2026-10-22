@@ -5,6 +5,12 @@ import { ApiError } from '../api/client'
 export interface RequestState<T> {
   data: T | null
   error: string | null
+  /**
+   * The error as it was thrown. `error` holds the message that is shown to
+   * the reader; this keeps the status code for callers that have to tell one
+   * failure from another.
+   */
+  failure: unknown
   isLoading: boolean
   /** Runs the request again without changing the key. */
   reload: () => void
@@ -26,6 +32,7 @@ export function useRequest<T>(key: string, loader: () => Promise<T>): RequestSta
     key: string
     data: T | null
     error: string | null
+    failure: unknown
   } | null>(null)
 
   const requestKey = `${key}::${reloadToken}`
@@ -39,7 +46,7 @@ export function useRequest<T>(key: string, loader: () => Promise<T>): RequestSta
       try {
         const data = await runLoader()
         if (!cancelled) {
-          setState({ key: requestKey, data, error: null })
+          setState({ key: requestKey, data, error: null, failure: null })
         }
       } catch (caught) {
         if (!cancelled) {
@@ -47,6 +54,7 @@ export function useRequest<T>(key: string, loader: () => Promise<T>): RequestSta
             key: requestKey,
             data: null,
             error: caught instanceof ApiError ? caught.message : FALLBACK_MESSAGE,
+            failure: caught,
           })
         }
       }
@@ -68,6 +76,7 @@ export function useRequest<T>(key: string, loader: () => Promise<T>): RequestSta
   return {
     data: isStale ? null : state.data,
     error: isStale ? null : state.error,
+    failure: isStale ? null : state.failure,
     isLoading: isStale,
     reload,
   }
