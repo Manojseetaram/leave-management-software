@@ -5,5 +5,5 @@ interface StudentTopbarProps {
 }
 
 export default function StudentTopbar({ onMenuClick }: StudentTopbarProps) {
-  return <AppTopbar title="Leave Management — Student" onMenuClick={onMenuClick} />
+  return <AppTopbar title="Student Portal" onMenuClick={onMenuClick} />
 }

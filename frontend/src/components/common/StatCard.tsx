@@ -10,7 +10,7 @@ interface StatCardProps {
   tone?: StatTone
 }
 
-const TONE_CLASSES: Record<StatTone, string> = {
+const VALUE_CLASSES: Record<StatTone, string> = {
   default: 'text-foreground',
   success: 'text-status-approved',
   warning: 'text-status-pending',
@@ -18,7 +18,7 @@ const TONE_CLASSES: Record<StatTone, string> = {
   info: 'text-brand-600',
 }
 
-const ICON_TONE_CLASSES: Record<StatTone, string> = {
+const ICON_CLASSES: Record<StatTone, string> = {
   default: 'bg-muted text-muted-foreground',
   success: 'bg-status-approved-soft text-status-approved',
   warning: 'bg-status-pending-soft text-status-pending',
@@ -38,18 +38,20 @@ export default function StatCard({
     <div className="app-card p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            {label}
+          <p className="app-label truncate">{label}</p>
+          <p
+            className={`app-numeric mt-2 text-stat font-semibold ${VALUE_CLASSES[tone]}`}
+          >
+            {value}
           </p>
-          <p className={`mt-2 text-stat font-semibold ${TONE_CLASSES[tone]}`}>{value}</p>
           {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
         </div>
 
         {Icon && (
           <span
-            className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${ICON_TONE_CLASSES[tone]}`}
+            className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${ICON_CLASSES[tone]}`}
           >
-            <Icon className="h-4 w-4" aria-hidden="true" />
+            <Icon className="h-5 w-5" aria-hidden="true" />
           </span>
         )}
       </div>

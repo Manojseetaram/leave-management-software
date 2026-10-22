@@ -20,7 +20,12 @@ export default function ProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
-  if (mustChangePassword) {
+  /*
+     A user with a temporary password only reaches the change-password page.
+     The redirect has to stop once they are already on it, or the guard
+     replaces the page with the redirect for ever and the screen stays blank.
+  */
+  if (mustChangePassword && location.pathname !== '/change-password') {
     return <Navigate to="/change-password" replace />
   }
 

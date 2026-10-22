@@ -74,6 +74,19 @@ function validate(values: LeaveFormValues): FormErrors {
   return errors
 }
 
+/** The number of whole days between the two dates the reader has entered. */
+function spanInDays(values: LeaveFormValues): number | null {
+  if (!values.start_at || !values.end_at) return null
+
+  const start = new Date(values.start_at)
+  const end = new Date(values.end_at)
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null
+  if (end.getTime() <= start.getTime()) return null
+
+  return Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000))
+}
+
 interface LeaveFormProps {
   initialValues?: Partial<LeaveFormValues>
   isSubmitting: boolean
@@ -115,53 +128,81 @@ export default function LeaveForm({
     onSubmit(values, 'draft')
   }
 
+  const span = spanInDays(values)
+
   return (
-    <form onSubmit={handleSubmit} className="app-card space-y-5 p-5 md:p-6" noValidate>
-      <Select
-        label="Type of leave"
-        options={TYPE_OPTIONS}
-        value={values.request_type}
-        onChange={(event) => setField('request_type', event.target.value as RequestType)}
-      />
+    <form onSubmit={handleSubmit} className="app-card p-5 md:p-6" noValidate>
+      <section>
+        <h2 className="text-section-title">Leave details</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          The type of leave and the dates it covers.
+        </p>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Input
-          label="From"
-          type="datetime-local"
-          value={values.start_at}
-          onChange={(event) => setField('start_at', event.target.value)}
-          error={errors.start_at}
-        />
-        <Input
-          label="To"
-          type="datetime-local"
-          value={values.end_at}
-          onChange={(event) => setField('end_at', event.target.value)}
-          error={errors.end_at}
-        />
-      </div>
+        <div className="mt-5 space-y-5">
+          <Select
+            label="Type of leave"
+            options={TYPE_OPTIONS}
+            value={values.request_type}
+            onChange={(event) => setField('request_type', event.target.value as RequestType)}
+          />
 
-      <Input
-        label="Destination"
-        placeholder="Where are you going?"
-        maxLength={MAX_DESTINATION_LENGTH}
-        value={values.destination}
-        onChange={(event) => setField('destination', event.target.value)}
-        error={errors.destination}
-        hint="Optional. Useful for event permissions and personal leave."
-      />
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Input
+              label="From"
+              type="datetime-local"
+              value={values.start_at}
+              onChange={(event) => setField('start_at', event.target.value)}
+              error={errors.start_at}
+            />
+            <Input
+              label="To"
+              type="datetime-local"
+              value={values.end_at}
+              onChange={(event) => setField('end_at', event.target.value)}
+              error={errors.end_at}
+            />
+          </div>
 
-      <Textarea
-        label="Reason"
-        placeholder="Explain the reason for your leave."
-        maxLength={MAX_REASON_LENGTH}
-        value={values.reason}
-        onChange={(event) => setField('reason', event.target.value)}
-        error={errors.reason}
-        hint={`${values.reason.trim().length}/${MAX_REASON_LENGTH} characters`}
-      />
+          {span !== null && (
+            <p className="app-numeric inline-flex items-center gap-2 rounded-md bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-800">
+              This request covers {span} {span === 1 ? 'day' : 'days'}.
+            </p>
+          )}
+        </div>
+      </section>
 
-      <div className="flex flex-col gap-2 border-t border-border pt-5 sm:flex-row sm:justify-end">
+      <div className="my-6 h-px bg-border" />
+
+      <section>
+        <h2 className="text-section-title">Reason and destination</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          What the leave is for, and where you are going.
+        </p>
+
+        <div className="mt-5 space-y-5">
+          <Input
+            label="Destination"
+            placeholder="Where are you going?"
+            maxLength={MAX_DESTINATION_LENGTH}
+            value={values.destination}
+            onChange={(event) => setField('destination', event.target.value)}
+            error={errors.destination}
+            hint="Optional. Useful for event permissions and personal leave."
+          />
+
+          <Textarea
+            label="Reason"
+            placeholder="Explain the reason for your leave."
+            maxLength={MAX_REASON_LENGTH}
+            value={values.reason}
+            onChange={(event) => setField('reason', event.target.value)}
+            error={errors.reason}
+            hint={`${values.reason.trim().length}/${MAX_REASON_LENGTH} characters`}
+          />
+        </div>
+      </section>
+
+      <div className="mt-6 flex flex-col gap-2 border-t border-border pt-5 sm:flex-row sm:justify-end">
         {onCancel && (
           <Button variant="secondary" onClick={onCancel} disabled={isSubmitting}>
             Cancel

@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost'
-export type ButtonSize = 'sm' | 'md'
+export type ButtonVariant = 'primary' | 'secondary' | 'success' | 'danger' | 'outline' | 'ghost'
+export type ButtonSize = 'sm' | 'md' | 'lg'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
@@ -10,23 +10,37 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean
   /** Renders the button as a router link instead of a <button>. */
   to?: string
+  /** Stretches the button across the width of its container. */
+  fullWidth?: boolean
   children?: ReactNode
 }
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary text-primary-foreground hover:opacity-90 disabled:hover:opacity-100',
+    'bg-primary text-primary-foreground shadow-xs hover:bg-brand-700 active:bg-brand-800',
   secondary:
-    'bg-secondary text-secondary-foreground hover:bg-accent disabled:hover:bg-secondary',
-  danger: 'bg-destructive text-destructive-foreground hover:opacity-90 disabled:hover:opacity-100',
-  ghost: 'bg-transparent text-foreground hover:bg-muted disabled:hover:bg-transparent',
+    'bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground',
+  success:
+    'bg-success text-success-foreground shadow-xs hover:brightness-95 active:brightness-90',
+  danger:
+    'bg-destructive text-destructive-foreground shadow-xs hover:brightness-95 active:brightness-90',
+  outline:
+    'border border-border bg-card text-foreground hover:bg-muted hover:text-foreground',
+  ghost: 'bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground',
 }
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
   sm: 'h-8 px-3 text-xs',
   md: 'h-10 px-4 text-sm',
+  lg: 'h-11 px-5 text-sm',
 }
 
+/**
+ * The button of the whole interface.
+ *
+ * The focus indicator comes from the shared outline in the base layer, so
+ * every button in the application reacts to the keyboard in the same way.
+ */
 export default function Button({
   variant = 'primary',
   size = 'md',
@@ -36,9 +50,10 @@ export default function Button({
   children,
   type = 'button',
   to,
+  fullWidth = false,
   ...rest
 }: ButtonProps) {
-  const classes = `inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`
+  const classes = `inline-flex items-center justify-center gap-2 rounded-md font-medium transition-[background-color,color,box-shadow,filter] duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${fullWidth ? 'w-full' : ''} ${className}`
 
   const spinner = isLoading ? (
     <span

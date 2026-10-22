@@ -1,15 +1,23 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { ArrowLeft, CheckCircle2, Pencil, Send, Undo2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Pencil,
+  Send,
+  Undo2,
+} from 'lucide-react'
 
 import { ApiError } from '../../api/client'
 import * as leaveApi from '../../api/leaveApi'
 
 import Badge from '../../components/common/Badge'
 import Button from '../../components/common/Button'
+import Callout from '../../components/common/Callout'
 import Field from '../../components/common/Field'
 import Modal from '../../components/common/Modal'
+import PageHeader from '../../components/common/PageHeader'
 import { ErrorState, LoadingState } from '../../components/common/States'
 import DocumentsNotice from '../../components/student/DocumentsNotice'
 
@@ -21,16 +29,49 @@ import {
   canSubmit,
   canWithdraw,
   isEditable,
-  REQUEST_TYPE_LABELS,
+  REQUEST_STATUS_LABELS,
 } from '../../utils/leave'
+import { REQUEST_STATUS_TONES } from '../../utils/status'
 
-import type { HistoryEntry, LeaveRequest } from '../../types/leave'
+import type { HistoryEntry, LeaveRequest, RequestStatus } from '../../types/leave'
 
 type PendingAction = 'withdraw' | 'complete'
 
 interface DetailsData {
   request: LeaveRequest
   entries: HistoryEntry[]
+}
+
+/** What the reader is told about the state of the request. */
+const NEXT_STEP: Record<RequestStatus, { title: string; text: string }> = {
+  draft: {
+    title: 'This is still a draft',
+    text: 'Submit it when you are ready for it to be reviewed.',
+  },
+  pending: {
+    title: 'The HOD is reviewing it',
+    text: 'Your Head of Department is reviewing the request. You can still withdraw it until a decision is made.',
+  },
+  changes_requested: {
+    title: 'Changes were requested',
+    text: 'The Head of Department asked for changes. Edit the request and submit it again.',
+  },
+  approved: {
+    title: 'The request is approved',
+    text: 'Mark it as completed once the leave has ended.',
+  },
+  rejected: {
+    title: 'The request was not granted',
+    text: 'You can send a new request if the situation changes.',
+  },
+  withdrawn: {
+    title: 'You withdrew this request',
+    text: 'You can send a new request whenever you need to.',
+  },
+  completed: {
+    title: 'This request is closed',
+    text: 'The history below shows everything that happened.',
+  },
 }
 
 export default function LeaveDetails() {
@@ -108,80 +149,81 @@ export default function LeaveDetails() {
 
   const { request, entries } = data
   const duration = daysBetween(request.start_at, request.end_at)
+  const next = NEXT_STEP[request.status]
 
   return (
     <div className="app-page">
-      <header className="page-header">
-        <div>
+      <PageHeader
+        title={REQUEST_TYPE_LABELS[request.request_type]}
+        description={`Requested ${formatDateTime(request.created_at)}`}
+        eyebrow={
           <button
             type="button"
             onClick={() => navigate('/student/history')}
-            className="mb-2 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Back to my requests
           </button>
+        }
+        actions={
+          <>
+            {isEditable(request.status) && (
+              <Button variant="secondary" to={`/student/apply?edit=${request.id}`}>
+                <Pencil className="h-4 w-4" aria-hidden="true" />
+                Edit
+              </Button>
+            )}
 
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-page-title">{REQUEST_TYPE_LABELS[request.request_type]}</h1>
-            <Badge status={request.status} />
-          </div>
+            {canSubmit(request.status) && (
+              <Button onClick={() => void runAction('submit')} isLoading={isActing}>
+                <Send className="h-4 w-4" aria-hidden="true" />
+                Submit request
+              </Button>
+            )}
 
-          <p className="mt-1 text-sm text-muted-foreground">
-            Requested {formatDateTime(request.created_at)}
-          </p>
-        </div>
+            {canWithdraw(request.status) && (
+              <Button
+                variant="danger"
+                onClick={() => setPendingAction('withdraw')}
+                disabled={isActing}
+              >
+                <Undo2 className="h-4 w-4" aria-hidden="true" />
+                Withdraw
+              </Button>
+            )}
 
-        <div className="flex flex-wrap gap-2">
-          {isEditable(request.status) && (
-            <Button variant="secondary" to={`/student/apply?edit=${request.id}`}>
-              <Pencil className="h-4 w-4" aria-hidden="true" />
-              Edit
-            </Button>
-          )}
+            {canComplete(request.status) && (
+              <Button
+                variant="secondary"
+                onClick={() => setPendingAction('complete')}
+                disabled={isActing}
+              >
+                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                Mark as completed
+              </Button>
+            )}
+          </>
+        }
+      />
 
-          {canSubmit(request.status) && (
-            <Button onClick={() => void runAction('submit')} isLoading={isActing}>
-              <Send className="h-4 w-4" aria-hidden="true" />
-              Submit request
-            </Button>
-          )}
-
-          {canWithdraw(request.status) && (
-            <Button
-              variant="danger"
-              onClick={() => setPendingAction('withdraw')}
-              disabled={isActing}
-            >
-              <Undo2 className="h-4 w-4" aria-hidden="true" />
-              Withdraw
-            </Button>
-          )}
-
-          {canComplete(request.status) && (
-            <Button
-              variant="secondary"
-              onClick={() => setPendingAction('complete')}
-              disabled={isActing}
-            >
-              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-              Mark as completed
-            </Button>
-          )}
-        </div>
-      </header>
+      <div className="mb-5">
+        <Badge status={request.status} withDot />
+      </div>
 
       {actionError && (
-        <p
+        <Callout
+          tone="danger"
           role="alert"
-          className="app-card mb-4 border-destructive/40 p-3 text-sm text-destructive"
+          title="The action could not be completed"
+          className="mb-5"
         >
           {actionError}
-        </p>
+        </Callout>
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
           <section className="app-card p-5 md:p-6">
             <h2 className="text-section-title">Request details</h2>
 
@@ -198,23 +240,21 @@ export default function LeaveDetails() {
 
             <div className="mt-5 border-t border-border pt-5">
               <h3 className="text-sm font-semibold text-foreground">Reason</h3>
-              <p className="mt-1.5 text-sm whitespace-pre-wrap text-muted-foreground">
+              <p className="mt-1.5 text-sm whitespace-pre-wrap break-words text-muted-foreground">
                 {request.reason}
               </p>
             </div>
-
-            {request.decision_reason && (
-              <div className="mt-5 border-t border-border pt-5">
-                <h3 className="text-sm font-semibold text-foreground">Decision</h3>
-                <p className="mt-1.5 text-sm whitespace-pre-wrap text-muted-foreground">
-                  {request.decision_reason}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Decided {formatDateTime(request.decided_at)}
-                </p>
-              </div>
-            )}
           </section>
+
+          {request.decision_reason && (
+            <Callout
+              tone={REQUEST_STATUS_TONES[request.status]}
+              title="Decision"
+            >
+              <p className="whitespace-pre-wrap break-words">{request.decision_reason}</p>
+              <p className="mt-2 text-xs">Decided {formatDateTime(request.decided_at)}</p>
+            </Callout>
+          )}
 
           <section className="app-card p-5 md:p-6">
             <h2 className="text-section-title">History</h2>
@@ -224,25 +264,37 @@ export default function LeaveDetails() {
                 Nothing has happened to this request yet.
               </p>
             ) : (
-              <ol className="mt-4 space-y-4">
-                {entries.map((entry) => (
-                  <li key={entry.id} className="flex gap-3">
+              <ol className="mt-5 space-y-0">
+                {entries.map((entry, index) => (
+                  <li key={entry.id} className="relative flex gap-4 pb-6 last:pb-0">
+                    {index < entries.length - 1 && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute top-6 left-[11px] h-full w-px bg-border"
+                      />
+                    )}
+
                     <span
                       aria-hidden="true"
-                      className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-500"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-sm text-foreground">
+                      className="relative mt-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 ring-4 ring-card"
+                    >
+                      <span className="h-2 w-2 rounded-full bg-brand-600" />
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">
                         {entry.old_status
                           ? `${entry.old_status.replaceAll('_', ' ')} → ${entry.new_status.replaceAll('_', ' ')}`
                           : `Created as ${entry.new_status.replaceAll('_', ' ')}`}
                       </p>
+
                       {entry.comment && (
-                        <p className="mt-0.5 text-sm text-muted-foreground">
+                        <p className="mt-1 text-sm break-words whitespace-pre-wrap text-muted-foreground">
                           {entry.comment}
                         </p>
                       )}
-                      <p className="mt-0.5 text-xs text-muted-foreground">
+
+                      <p className="app-numeric mt-1 text-xs text-muted-foreground">
                         {formatDateTime(entry.created_at)}
                       </p>
                     </div>
@@ -253,35 +305,16 @@ export default function LeaveDetails() {
           </section>
         </div>
 
-        <aside className="space-y-4">
+        <aside className="min-w-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <Callout tone={REQUEST_STATUS_TONES[request.status]} title={next.title}>
+            {next.text}
+          </Callout>
+
           <DocumentsNotice />
 
-          <div className="app-card p-4">
-            <h2 className="text-sm font-semibold text-foreground">What happens next</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {request.status === 'pending' &&
-                'Your Head of Department is reviewing the request. You can still withdraw it until a decision is made.'}
-              {request.status === 'changes_requested' &&
-                'The Head of Department asked for changes. Edit the request and submit it again.'}
-              {request.status === 'approved' &&
-                'The request is approved. Mark it as completed once the leave has ended.'}
-              {request.status === 'completed' &&
-                'This request is closed. The history above shows everything that happened.'}
-              {request.status === 'rejected' &&
-                'The request was not granted. You can send a new request if the situation changes.'}
-              {request.status === 'withdrawn' &&
-                'You withdrew this request. You can send a new request whenever you need to.'}
-              {request.status === 'draft' &&
-                'This is still a draft. Submit it when you are ready for it to be reviewed.'}
-            </p>
-          </div>
-
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs leading-relaxed text-muted-foreground">
             Something wrong?{' '}
-            <Link
-              to="/student/history"
-              className="font-medium text-brand-600 hover:text-brand-700"
-            >
+            <Link to="/student/history" className="app-link">
               See all your requests
             </Link>
             .

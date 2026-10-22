@@ -1,11 +1,20 @@
 /*
-   The dark variant is declared before the Tailwind import: in Tailwind v4.3
-   a directive placed after @import is not consumed and leaks into the
-   built stylesheet.
-*/
-@custom-variant dark (&:where(.dark, .dark *));
+   The Tailwind import must come first and it must end with a semicolon.
 
-@import 'tailwindcss'
+   Without the semicolon the CSS parser reads the tokens that follow as the
+   import's media condition. The next block in this file is `:root { ... }`, so
+   Tailwind emits the whole stylesheet wrapped in `@media root { ... }`. No
+   browser supports the `root` media feature, so the media query never matches
+   and the browser throws the entire stylesheet away - the theme variables, the
+   preflight reset and every utility class - and the app renders as plain
+   unstyled HTML.
+
+   The dark variant is declared after the import, which is the order the
+   Tailwind v4 documentation uses.
+*/
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* =========================================================
    DESIGN TOKENS
@@ -40,9 +49,26 @@
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
 
+  --info: #0369a1;
+  --info-foreground: #ffffff;
+  --info-soft: #e0f2fe;
+
+  --success: #15803d;
+  --success-foreground: #ffffff;
+  --success-soft: #dcfce7;
+
   --border: #e3e6ee;
-  --input: #e3e6ee;
+  --input: #d7dce8;
   --ring: #4f46e5;
+
+  /* Navigation rail */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #16181d;
+  --sidebar-muted: #5f6779;
+  --sidebar-border: #e3e6ee;
+  --sidebar-hover: #f4f5f9;
+  --sidebar-active: #eef2ff;
+  --sidebar-active-foreground: #3730a3;
 }
 
 .dark {
@@ -70,9 +96,25 @@
   --destructive: #f87171;
   --destructive-foreground: #101218;
 
+  --info: #38bdf8;
+  --info-foreground: #101218;
+  --info-soft: #0c4a6e;
+
+  --success: #4ade80;
+  --success-foreground: #101218;
+  --success-soft: #14532d;
+
   --border: #262a36;
   --input: #2c313d;
   --ring: #818cf8;
+
+  --sidebar: #171a22;
+  --sidebar-foreground: #eef0f6;
+  --sidebar-muted: #9aa3b5;
+  --sidebar-border: #262a36;
+  --sidebar-hover: #1e222b;
+  --sidebar-active: #262a36;
+  --sidebar-active-foreground: #c7d2fe;
 }
 
 @theme inline {
@@ -99,6 +141,22 @@
 
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-soft: var(--info-soft);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-active-foreground: var(--sidebar-active-foreground);
 
   --color-border: var(--border);
   --color-input: var(--input);
@@ -130,7 +188,7 @@
   --color-brand-900: #312e81;
 
   /* Leave request status */
-  --color-status-draft: #64748b;
+  --color-status-draft: #475569;
   --color-status-draft-soft: #e2e8f0;
   --color-status-pending: #b45309;
   --color-status-pending-soft: #fef3c7;
@@ -149,6 +207,11 @@
   --spacing-sidebar: 17rem;
   --spacing-header: 4.25rem;
 
+  /* Elevation */
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.03);
+  --shadow-card-hover: 0 8px 20px rgb(16 24 40 / 0.07), 0 2px 6px rgb(16 24 40 / 0.04);
+  --shadow-popover: 0 20px 45px rgb(16 24 40 / 0.14), 0 4px 12px rgb(16 24 40 / 0.08);
+
   /* Typography */
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-heading: 'Inter', ui-sans-serif, system-ui, sans-serif;
@@ -162,6 +225,10 @@
 
   --text-stat: 2rem;
   --text-stat--line-height: 1;
+
+  --text-display: 2.5rem;
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.02em;
 }
 
 /* =========================================================
@@ -190,6 +257,7 @@
     color: var(--foreground);
 
     font-family: var(--font-sans);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -226,6 +294,19 @@
     color: #ffffff;
   }
 
+  /*
+     One focus treatment for the whole application.
+
+     The outline is used because no other utility in the project writes to it,
+     so a component that draws its own ring with `focus-visible:ring-*` simply
+     turns the outline off with `focus-visible:outline-none` and the two never
+     appear at the same time.
+  */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -243,6 +324,18 @@
   ::-webkit-scrollbar-thumb:hover {
     background: rgb(79 70 229 / 0.45);
   }
+
+  /* A reader who asks for less motion gets none of the animation. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 /* =========================================================
@@ -254,6 +347,32 @@
   .app-shell {
     min-height: 100vh;
     width: 100%;
+  }
+
+  /*
+     The navigation rail. It is a fixed column on the desktop and a drawer
+     below that, so the content beside it is offset by the same width.
+
+     The width of zero matters: a flex item refuses to shrink below the
+     width of its content, and a table with a minimum width would push the
+     whole page sideways on a phone.
+  */
+  .app-sidebar {
+    width: var(--spacing-sidebar);
+  }
+
+  .app-shell-content {
+    min-width: 0;
+  }
+
+  .app-topbar {
+    height: var(--spacing-header);
+  }
+
+  @media (min-width: 1024px) {
+    .app-shell-content {
+      padding-left: var(--spacing-sidebar);
+    }
   }
 
   /* Standard page wrapper */
@@ -273,6 +392,13 @@
     .app-page {
       padding: 2.5rem;
     }
+  }
+
+  /* Keeps the reading width sane on a wide monitor */
+  .app-container {
+    width: 100%;
+    max-width: 90rem;
+    margin-inline: auto;
   }
 
   /* Page header */
@@ -298,9 +424,7 @@
     color: var(--card-foreground);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    box-shadow:
-      0 1px 2px rgb(16 24 40 / 0.03),
-      0 1px 3px rgb(16 24 40 / 0.02);
+    box-shadow: var(--shadow-card);
   }
 
   /* Hoverable card */
@@ -313,9 +437,7 @@
 
   .app-card-hover:hover {
     transform: translateY(-2px);
-    box-shadow:
-      0 8px 20px rgb(16 24 40 / 0.06),
-      0 2px 6px rgb(16 24 40 / 0.04);
+    box-shadow: var(--shadow-card-hover);
   }
 
   /* Brand gradient */
@@ -325,6 +447,118 @@
       var(--color-brand-600),
       var(--color-brand-800)
     );
+  }
+
+  /*
+     The shared form control. An input, a select and a textarea all carry it,
+     so the three can never drift apart in height, radius or focus.
+  */
+  .app-control {
+    width: 100%;
+    border: 1px solid var(--input);
+    border-radius: var(--radius-md);
+    background-color: var(--card);
+    color: var(--foreground);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease,
+      background-color 150ms ease;
+  }
+
+  .app-control::placeholder {
+    color: var(--muted-foreground);
+  }
+
+  .app-control:hover:not(:disabled):not([aria-invalid='true']) {
+    border-color: color-mix(in oklab, var(--input) 70%, var(--foreground));
+  }
+
+  .app-control:focus-visible {
+    border-color: var(--ring);
+  }
+
+  .app-control:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .app-control[aria-invalid='true'] {
+    border-color: var(--destructive);
+  }
+
+  .app-control[aria-invalid='true']:focus-visible {
+    border-color: var(--destructive);
+    outline-color: var(--destructive);
+  }
+
+  /* Data table */
+  .app-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+    text-align: left;
+  }
+
+  .app-table thead th {
+    padding: 0.75rem 1rem;
+    background-color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+  }
+
+  .app-table tbody td {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  .app-table tbody tr {
+    transition: background-color 150ms ease;
+  }
+
+  .app-table tbody tr:hover {
+    background-color: color-mix(in oklab, var(--muted) 60%, transparent);
+  }
+
+  /* Inline link */
+  .app-link {
+    font-weight: 500;
+    color: var(--color-brand-600);
+    text-decoration: none;
+    transition: color 150ms ease;
+  }
+
+  .app-link:hover {
+    color: var(--color-brand-700);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* The uppercase micro label used above a value */
+  .app-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  /* Aligns the numbers in a column */
+  .app-numeric {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Hairline between two blocks */
+  .app-divider {
+    height: 1px;
+    background-color: var(--border);
   }
 
   /* Empty state */

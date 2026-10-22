@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import { ArrowLeft, Lock } from 'lucide-react'
 
 import { ApiError } from '../../api/client'
 import * as leaveApi from '../../api/leaveApi'
 
 import Button from '../../components/common/Button'
-import { ErrorState, LoadingState } from '../../components/common/States'
+import Callout from '../../components/common/Callout'
+import PageHeader from '../../components/common/PageHeader'
+import { EmptyState, ErrorState, LoadingState } from '../../components/common/States'
 import DocumentsNotice from '../../components/student/DocumentsNotice'
 import LeaveForm, { type LeaveFormIntent } from '../../components/student/LeaveForm'
 
@@ -16,6 +19,13 @@ import { fromDateTimeLocal, toDateTimeLocal } from '../../utils/format'
 import { isEditable } from '../../utils/leave'
 
 import type { LeaveFormValues, LeaveRequest, NewLeave, UpdateLeave } from '../../types/leave'
+
+const STEPS = [
+  'A new request starts as a draft.',
+  'Submitting sends it to the Head of Department.',
+  'You can withdraw a request while it is still pending.',
+  'If changes are requested, edit the request and submit it again.',
+]
 
 export default function ApplyLeave() {
   const [searchParams] = useSearchParams()
@@ -79,22 +89,28 @@ export default function ApplyLeave() {
 
   return (
     <div className="app-page">
-      <header className="page-header">
-        <div>
-          <h1 className="text-page-title">
-            {isEditing ? 'Edit request' : 'Apply for leave'}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {isEditing
-              ? 'Only drafts and returned requests can be changed.'
-              : 'Fill in the details and send the request to your Head of Department.'}
-          </p>
-        </div>
-
-        <Button variant="secondary" to="/student/history">
-          My requests
-        </Button>
-      </header>
+      <PageHeader
+        title={isEditing ? 'Edit request' : 'Apply for leave'}
+        description={
+          isEditing
+            ? 'Only drafts and returned requests can be changed.'
+            : 'Fill in the details and send the request to your Head of Department.'
+        }
+        eyebrow={
+          <Link
+            to="/student/history"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            My requests
+          </Link>
+        }
+        actions={
+          <Button variant="secondary" to="/student/history">
+            My requests
+          </Button>
+        }
+      />
 
       {isLoading ? (
         <LoadingState label="Loading the request..." />
@@ -104,29 +120,27 @@ export default function ApplyLeave() {
         </div>
       ) : notEditable ? (
         <div className="app-card">
-          <div className="empty-state px-6 py-12">
-            <p className="text-base font-medium text-foreground">
-              This request can no longer be edited
-            </p>
-            <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              A request can only be changed while it is a draft or while the Head of
-              Department has asked for changes.
-            </p>
-            <div className="mt-4">
+          <EmptyState
+            icon={<Lock className="h-5 w-5" aria-hidden="true" />}
+            title="This request can no longer be edited"
+            description="A request can only be changed while it is a draft or while the Head of Department has asked for changes."
+            action={
               <Button to={`/student/requests/${editId}`}>View the request</Button>
-            </div>
-          </div>
+            }
+          />
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+          <div className="min-w-0 lg:col-span-2">
             {actionError && (
-              <p
+              <Callout
+                tone="danger"
                 role="alert"
-                className="app-card mb-4 border-destructive/40 p-3 text-sm text-destructive"
+                title="The request was not saved"
+                className="mb-4"
               >
                 {actionError}
-              </p>
+              </Callout>
             )}
 
             <LeaveForm
@@ -149,34 +163,37 @@ export default function ApplyLeave() {
             />
           </div>
 
-          <aside className="space-y-4">
+          <aside className="min-w-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
             <DocumentsNotice />
 
-            <div className="app-card p-4">
-              <h2 className="text-sm font-semibold text-foreground">How this works</h2>
-              <ol className="mt-3 space-y-2 text-sm text-muted-foreground">
-                <li>1. A new request starts as a draft.</li>
-                <li>2. Submitting sends it to the Head of Department.</li>
-                <li>3. You can withdraw a request while it is still pending.</li>
-                <li>
-                  4. If changes are requested, edit the request and submit it again.
-                </li>
+            {request?.status === 'changes_requested' && (
+              <Callout tone="violet" title="Changes were requested">
+                The Head of Department asked for changes. Update the request and
+                submit it again.
+              </Callout>
+            )}
+
+            <section className="app-card p-5">
+              <h2 className="text-section-title">How this works</h2>
+
+              <ol className="mt-4 space-y-3">
+                {STEPS.map((step, index) => (
+                  <li key={step} className="flex gap-3">
+                    <span
+                      aria-hidden="true"
+                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700"
+                    >
+                      {index + 1}
+                    </span>
+                    <span className="pt-0.5 text-sm text-muted-foreground">{step}</span>
+                  </li>
+                ))}
               </ol>
+            </section>
 
-              {request?.status === 'changes_requested' && (
-                <p className="mt-3 border-t border-border pt-3 text-sm text-status-changes">
-                  The Head of Department asked for changes. Update the request and
-                  submit it again.
-                </p>
-              )}
-            </div>
-
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs leading-relaxed text-muted-foreground">
               Need help? Read the{' '}
-              <Link
-                to="/student/history"
-                className="font-medium text-brand-600 hover:text-brand-700"
-              >
+              <Link to="/student/history" className="app-link">
                 request history
               </Link>{' '}
               to see the state of your earlier requests.

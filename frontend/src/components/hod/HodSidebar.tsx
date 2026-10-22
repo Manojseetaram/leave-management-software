@@ -3,11 +3,11 @@ import { Award, ChartColumn, ClipboardList, LayoutDashboard, Users } from 'lucid
 import AppSidebar, { type NavItem } from '../common/AppSidebar'
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', to: '/hod/dashboard', icon: LayoutDashboard },
-  { label: 'Leave requests', to: '/hod/requests', icon: ClipboardList },
-  { label: 'Students', to: '/hod/students', icon: Users },
-  { label: 'Reports', to: '/hod/reports', icon: ChartColumn },
-  { label: 'Certificates', to: '/hod/certificates', icon: Award },
+  { label: 'Dashboard', to: '/hod/dashboard', icon: LayoutDashboard, group: 'Overview' },
+  { label: 'Leave requests', to: '/hod/requests', icon: ClipboardList, group: 'Approvals' },
+  { label: 'Students', to: '/hod/students', icon: Users, group: 'Records' },
+  { label: 'Reports', to: '/hod/reports', icon: ChartColumn, group: 'Records' },
+  { label: 'Certificates', to: '/hod/certificates', icon: Award, group: 'Records' },
 ]
 
 interface HodSidebarProps {

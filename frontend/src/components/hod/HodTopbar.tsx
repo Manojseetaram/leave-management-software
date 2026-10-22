@@ -5,5 +5,5 @@ interface HodTopbarProps {
 }
 
 export default function HodTopbar({ onMenuClick }: HodTopbarProps) {
-  return <AppTopbar title="Leave Management — HOD" onMenuClick={onMenuClick} />
+  return <AppTopbar title="HOD Console" onMenuClick={onMenuClick} />
 }

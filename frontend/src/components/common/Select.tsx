@@ -40,7 +40,7 @@ export default function Select({
         id={selectId}
         aria-invalid={error ? true : undefined}
         aria-describedby={error || hint ? messageId : undefined}
-        className={`h-10 w-full rounded-lg border bg-card px-3 text-sm text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60 ${error ? 'border-destructive' : 'border-input'} ${className}`}
+        className={`app-control h-10 px-3 ${className}`}
         {...rest}
       >
         {placeholder && <option value="">{placeholder}</option>}

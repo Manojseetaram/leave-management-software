@@ -1,11 +1,20 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import { CheckCircle2, Lock, ShieldCheck } from 'lucide-react'
 
 import { ApiError } from '../../api/client'
+import AuthShell from '../../components/auth/AuthShell'
 import Button from '../../components/common/Button'
-import Input from '../../components/common/Input'
+import Callout from '../../components/common/Callout'
+import PasswordInput from '../../components/common/PasswordInput'
 import { useAuth } from '../../context/useAuth'
+
+const FEATURES = [
+  { icon: ShieldCheck, text: 'A password only you know' },
+  { icon: Lock, text: 'Your other sessions are signed out' },
+  { icon: CheckCircle2, text: 'Your account is fully set up afterwards' },
+]
 
 /**
  * The backend refuses every route that needs a fully set up account while a
@@ -19,6 +28,11 @@ export default function ChangePassword() {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<{
+    currentPassword?: string
+    newPassword?: string
+    confirmPassword?: string
+  }>({})
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -26,10 +40,16 @@ export default function ChangePassword() {
     event.preventDefault()
     setError(null)
 
-    if (newPassword !== confirmPassword) {
-      setError('The new passwords do not match.')
-      return
+    const found: typeof fieldErrors = {}
+    if (!currentPassword) found.currentPassword = 'Enter your current password.'
+    if (!newPassword) found.newPassword = 'Enter a new password.'
+    if (!confirmPassword) found.confirmPassword = 'Type the new password again.'
+    if (newPassword && confirmPassword && newPassword !== confirmPassword) {
+      found.confirmPassword = 'The new passwords do not match.'
     }
+
+    setFieldErrors(found)
+    if (Object.keys(found).length > 0) return
 
     setIsSubmitting(true)
     try {
@@ -47,60 +67,77 @@ export default function ChangePassword() {
     }
   }
 
+  const clearError = (field: keyof typeof fieldErrors) => {
+    setFieldErrors((current) => ({ ...current, [field]: undefined }))
+    setError(null)
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold">Set a new password</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {user
-              ? `${user.full_name}, you are still using a temporary password.`
-              : 'You are still using a temporary password.'}
-          </p>
-        </div>
+    <AuthShell
+      title="Set a new password"
+      subtitle={
+        user
+          ? `${user.full_name}, you are still using a temporary password.`
+          : 'You are still using a temporary password.'
+      }
+      headline="Replace the temporary password before you carry on."
+      description="Your account is only fully set up once the temporary password has been changed. Every other session is signed out when it is."
+      features={FEATURES}
+      footer="Information Science & Engineering"
+    >
+      <form onSubmit={handleSubmit} className="app-card space-y-5 p-6 sm:p-8" noValidate>
+        <PasswordInput
+          label="Current password"
+          name="current_password"
+          autoComplete="current-password"
+          required
+          disabled={isSubmitting}
+          value={currentPassword}
+          onChange={(event) => {
+            setCurrentPassword(event.target.value)
+            clearError('currentPassword')
+          }}
+          error={fieldErrors.currentPassword}
+        />
 
-        <form onSubmit={handleSubmit} className="app-card space-y-4 p-6" noValidate>
-          <Input
-            label="Current password"
-            name="current_password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={currentPassword}
-            onChange={(event) => setCurrentPassword(event.target.value)}
-          />
+        <PasswordInput
+          label="New password"
+          name="new_password"
+          autoComplete="new-password"
+          required
+          disabled={isSubmitting}
+          value={newPassword}
+          onChange={(event) => {
+            setNewPassword(event.target.value)
+            clearError('newPassword')
+          }}
+          error={fieldErrors.newPassword}
+        />
 
-          <Input
-            label="New password"
-            name="new_password"
-            type="password"
-            autoComplete="new-password"
-            required
-            value={newPassword}
-            onChange={(event) => setNewPassword(event.target.value)}
-          />
+        <PasswordInput
+          label="Confirm new password"
+          name="confirm_password"
+          autoComplete="new-password"
+          required
+          disabled={isSubmitting}
+          value={confirmPassword}
+          onChange={(event) => {
+            setConfirmPassword(event.target.value)
+            clearError('confirmPassword')
+          }}
+          error={fieldErrors.confirmPassword}
+        />
 
-          <Input
-            label="Confirm new password"
-            name="confirm_password"
-            type="password"
-            autoComplete="new-password"
-            required
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-          />
+        {error && (
+          <Callout tone="danger" role="alert" title="The password was not changed">
+            {error}
+          </Callout>
+        )}
 
-          {error && (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          )}
-
-          <Button type="submit" isLoading={isSubmitting} className="w-full">
-            Update password
-          </Button>
-        </form>
-      </div>
-    </div>
+        <Button type="submit" isLoading={isSubmitting} fullWidth size="lg">
+          {isSubmitting ? 'Updating...' : 'Update password'}
+        </Button>
+      </form>
+    </AuthShell>
   )
 }

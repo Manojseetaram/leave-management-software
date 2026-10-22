@@ -33,7 +33,7 @@ export default function Textarea({
         rows={rows}
         aria-invalid={error ? true : undefined}
         aria-describedby={error || hint ? messageId : undefined}
-        className={`w-full resize-y rounded-lg border bg-card px-3 py-2 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60 ${error ? 'border-destructive' : 'border-input'} ${className}`}
+        className={`app-control resize-y px-3 py-2 ${className}`}
         {...rest}
       />
 

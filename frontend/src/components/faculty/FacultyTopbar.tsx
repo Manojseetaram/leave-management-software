@@ -5,5 +5,5 @@ interface FacultyTopbarProps {
 }
 
 export default function FacultyTopbar({ onMenuClick }: FacultyTopbarProps) {
-  return <AppTopbar title="Leave Management — Faculty" onMenuClick={onMenuClick} />
+  return <AppTopbar title="Faculty Portal" onMenuClick={onMenuClick} />
 }

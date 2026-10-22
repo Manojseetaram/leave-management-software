@@ -1,5 +1,7 @@
-import type { ReactNode } from 'react'
 import { GraduationCap } from 'lucide-react'
+import type { ReactNode } from 'react'
+
+import Callout from '../common/Callout'
 
 interface FacultyNoticeProps {
   title: string
@@ -18,19 +20,8 @@ interface FacultyNoticeProps {
  */
 export default function FacultyNotice({ title, children, action }: FacultyNoticeProps) {
   return (
-    <div className="rounded-lg border border-dashed border-border bg-muted/50 p-4">
-      <div className="flex items-start gap-3">
-        <GraduationCap
-          className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
-          aria-hidden="true"
-        />
-
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-foreground">{title}</p>
-          <div className="mt-1 text-sm text-muted-foreground">{children}</div>
-          {action && <div className="mt-3">{action}</div>}
-        </div>
-      </div>
-    </div>
+    <Callout tone="info" icon={GraduationCap} title={title} action={action}>
+      {children}
+    </Callout>
   )
 }

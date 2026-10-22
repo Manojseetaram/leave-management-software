@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
+import type { ReactNode } from 'react'
 
 import Badge from './Badge'
+import TableShell from './TableShell'
 
 import { formatDate, formatDateRange } from '../../utils/format'
 import { REQUEST_TYPE_LABELS } from '../../utils/leave'
@@ -22,6 +24,8 @@ interface LeaveRequestTableProps {
    * absent the column is left out entirely.
    */
   student?: (request: LeaveRequest) => string | undefined
+  /** Shown under the table, inside the same card. */
+  footer?: ReactNode
 }
 
 /** The list of leave requests, shared by the dashboards and the request lists. */
@@ -30,74 +34,58 @@ export default function LeaveRequestTable({
   caption,
   linkBase = '/student/requests',
   student,
+  footer,
 }: LeaveRequestTableProps) {
   return (
-    <div className="app-card overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-sm">
-          {caption && <caption className="sr-only">{caption}</caption>}
+    <TableShell caption={caption} minWidth="45rem" footer={footer}>
+      <thead>
+        <tr>
+          {student && <th scope="col">Student</th>}
+          <th scope="col">Type</th>
+          <th scope="col">Dates</th>
+          <th scope="col">Status</th>
+          <th scope="col">Submitted</th>
+          {linkBase !== null && (
+            <th scope="col" className="text-right">
+              <span className="sr-only">Actions</span>
+            </th>
+          )}
+        </tr>
+      </thead>
 
-          <thead className="bg-muted text-left text-xs tracking-wide text-muted-foreground uppercase">
-            <tr>
-              {student && (
-                <th scope="col" className="px-4 py-3 font-medium">
-                  Student
-                </th>
-              )}
-              <th scope="col" className="px-4 py-3 font-medium">
-                Type
-              </th>
-              <th scope="col" className="px-4 py-3 font-medium">
-                Dates
-              </th>
-              <th scope="col" className="px-4 py-3 font-medium">
-                Status
-              </th>
-              <th scope="col" className="px-4 py-3 font-medium">
-                Submitted
-              </th>
-              {linkBase !== null && (
-                <th scope="col" className="px-4 py-3 text-right font-medium">
-                  <span className="sr-only">Actions</span>
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {requests.map((request) => (
-              <tr key={request.id} className="transition-colors hover:bg-muted/60">
-                {student && (
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    {student(request) ?? '—'}
-                  </td>
-                )}
-                <td className="px-4 py-3 font-medium text-foreground">
-                  {REQUEST_TYPE_LABELS[request.request_type]}
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                  {formatDateRange(request.start_at, request.end_at)}
-                </td>
-                <td className="px-4 py-3">
-                  <Badge status={request.status} />
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                  {formatDate(request.submitted_at)}
-                </td>
-                {linkBase !== null && (
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      to={`${linkBase}/${request.id}`}
-                      className="text-sm font-medium text-brand-600 hover:text-brand-700 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      View
-                    </Link>
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      <tbody>
+        {requests.map((request) => (
+          <tr key={request.id}>
+            {student && (
+              <td className="font-medium text-foreground">
+                {student(request) ?? '—'}
+              </td>
+            )}
+            <td className="font-medium text-foreground">
+              {REQUEST_TYPE_LABELS[request.request_type]}
+            </td>
+            <td className="app-numeric whitespace-nowrap text-muted-foreground">
+              {formatDateRange(request.start_at, request.end_at)}
+            </td>
+            <td>
+              <Badge status={request.status} />
+            </td>
+            <td className="app-numeric whitespace-nowrap text-muted-foreground">
+              {formatDate(request.submitted_at)}
+            </td>
+            {linkBase !== null && (
+              <td className="text-right">
+                <Link
+                  to={`${linkBase}/${request.id}`}
+                  className="app-link text-sm focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  View
+                </Link>
+              </td>
+            )}
+          </tr>
+        ))}
+      </tbody>
+    </TableShell>
   )
 }

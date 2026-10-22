@@ -3,8 +3,8 @@ import { ClipboardList, LayoutDashboard } from 'lucide-react'
 import AppSidebar, { type NavItem } from '../common/AppSidebar'
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', to: '/faculty/dashboard', icon: LayoutDashboard },
-  { label: 'Student requests', to: '/faculty/students', icon: ClipboardList },
+  { label: 'Dashboard', to: '/faculty/dashboard', icon: LayoutDashboard, group: 'Overview' },
+  { label: 'Student requests', to: '/faculty/students', icon: ClipboardList, group: 'Records' },
 ]
 
 interface FacultySidebarProps {

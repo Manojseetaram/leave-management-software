@@ -1,18 +1,30 @@
-import { useState, type ReactNode } from 'react'
-import { KeyRound, MonitorSmartphone, ShieldCheck, Users } from 'lucide-react'
+import { useState } from 'react'
+import {
+  KeyRound,
+  MonitorSmartphone,
+  ShieldCheck,
+  Users,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { ApiError } from '../../api/client'
 import * as authApi from '../../api/authApi'
 import * as studentApi from '../../api/studentApi'
 
+import Avatar from '../../components/common/Avatar'
 import Button from '../../components/common/Button'
+import Callout from '../../components/common/Callout'
+import Field from '../../components/common/Field'
+import PageHeader from '../../components/common/PageHeader'
+import StatusBadge from '../../components/common/StatusBadge'
 import { EmptyState, ErrorState, LoadingState } from '../../components/common/States'
 
 import { useAuth } from '../../context/useAuth'
 import { useRequest } from '../../hooks/useRequest'
 
 import { formatDateTime } from '../../utils/format'
+import { STUDENT_STATUS_TONES } from '../../utils/status'
+import { STUDENT_STATUS_LABELS } from '../../utils/student'
 
 import type { SessionInfo } from '../../types/auth'
 import type { ParentContact, StudentRecord } from '../../types/student'
@@ -86,31 +98,46 @@ export default function Profile() {
 
   return (
     <div className="app-page">
-      <header className="page-header">
-        <div>
-          <h1 className="text-page-title">My profile</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Your student record, your parent contacts and your active sessions.
-          </p>
-        </div>
-
-        <Button variant="secondary" to="/change-password">
-          <KeyRound className="h-4 w-4" aria-hidden="true" />
-          Change password
-        </Button>
-      </header>
+      <PageHeader
+        title="My profile"
+        description="Your student record, your parent contacts and your active sessions."
+        actions={
+          <Button variant="secondary" to="/change-password">
+            <KeyRound className="h-4 w-4" aria-hidden="true" />
+            Change password
+          </Button>
+        }
+      />
 
       {error && (
-        <p
-          role="alert"
-          className="app-card mb-4 border-destructive/40 p-3 text-sm text-destructive"
-        >
+        <Callout tone="danger" role="alert" className="mb-5">
           {error}
-        </p>
+        </Callout>
+      )}
+
+      {student && (
+        <section className="app-card mb-6 flex flex-wrap items-center gap-4 p-5">
+          <Avatar name={student.full_name} size="lg" />
+
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-semibold text-foreground">
+              {student.full_name}
+            </h2>
+            <p className="app-numeric mt-0.5 text-sm text-muted-foreground">
+              {student.register_number} · {student.department} · Semester{' '}
+              {student.semester}
+              {student.section ? ` · Section ${student.section}` : ''}
+            </p>
+          </div>
+
+          <StatusBadge tone={STUDENT_STATUS_TONES[student.status]} withDot>
+            {STUDENT_STATUS_LABELS[student.status] ?? student.status}
+          </StatusBadge>
+        </section>
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="app-card p-5 md:p-6">
+        <section className="app-card min-w-0 p-5 md:p-6">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-brand-600" aria-hidden="true" />
             <h2 className="text-section-title">Student record</h2>
@@ -126,7 +153,9 @@ export default function Profile() {
               <Field label="Admission year">
                 {student.admission_year ? String(student.admission_year) : '—'}
               </Field>
-              <Field label="Account status">{student.status}</Field>
+              <Field label="Account status">
+                {STUDENT_STATUS_LABELS[student.status] ?? student.status}
+              </Field>
               <Field label="Email">{user?.email ?? '—'}</Field>
             </dl>
           ) : (
@@ -137,7 +166,7 @@ export default function Profile() {
           )}
         </section>
 
-        <section className="app-card p-5 md:p-6">
+        <section className="app-card min-w-0 p-5 md:p-6">
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-brand-600" aria-hidden="true" />
             <h2 className="text-section-title">Parent contacts</h2>
@@ -157,37 +186,33 @@ export default function Profile() {
                   key={parent.id}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3"
                 >
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{parent.full_name}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      {parent.full_name}
+                    </p>
                     <p className="text-xs text-muted-foreground capitalize">
                       {parent.relationship}
                     </p>
                   </div>
 
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      parent.verified_at
-                        ? 'bg-status-approved-soft text-status-approved'
-                        : 'bg-status-pending-soft text-status-pending'
-                    }`}
-                  >
+                  <StatusBadge tone={parent.verified_at ? 'success' : 'warning'}>
                     {parent.verified_at ? 'Verified' : 'Not verified'}
-                  </span>
+                  </StatusBadge>
                 </li>
               ))}
             </ul>
           )}
         </section>
 
-        <section className="app-card p-5 md:p-6 lg:col-span-2">
+        <section className="app-card min-w-0 p-5 md:p-6 lg:col-span-2">
           <div className="flex items-center gap-2">
             <MonitorSmartphone className="h-4 w-4 text-brand-600" aria-hidden="true" />
             <h2 className="text-section-title">Active sessions</h2>
           </div>
 
           <p className="mt-2 text-sm text-muted-foreground">
-            Every device that is currently signed in to your account. Signing one out
-            revokes it immediately — including the device you are using now.
+            Every device that is currently signed in to your account. Signing one
+            out revokes it immediately — including the device you are using now.
           </p>
 
           {sessions.length === 0 ? (
@@ -199,11 +224,11 @@ export default function Profile() {
                   key={session.id}
                   className="flex flex-wrap items-center justify-between gap-3 py-3"
                 >
-                  <div>
-                    <p className="text-sm text-foreground">
+                  <div className="min-w-0">
+                    <p className="app-numeric text-sm text-foreground">
                       Started {formatDateTime(session.created_at)}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="app-numeric text-xs text-muted-foreground">
                       Expires {formatDateTime(session.expires_at)}
                     </p>
                   </div>
@@ -222,22 +247,6 @@ export default function Profile() {
           )}
         </section>
       </div>
-    </div>
-  )
-}
-
-interface FieldProps {
-  label: string
-  children: ReactNode
-}
-
-function Field({ label, children }: FieldProps) {
-  return (
-    <div>
-      <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {label}
-      </dt>
-      <dd className="mt-1 text-sm text-foreground">{children}</dd>
     </div>
   )
 }
