@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 
-import Badge from '../common/Badge'
+import Badge from './Badge'
 
 import { formatDate, formatDateRange } from '../../utils/format'
 import { REQUEST_TYPE_LABELS } from '../../utils/leave'
@@ -10,10 +10,26 @@ import type { LeaveRequest } from '../../types/leave'
 interface LeaveRequestTableProps {
   requests: LeaveRequest[]
   caption?: string
+  /**
+   * The path each row links to, without the request id. The Student console
+   * links to its own history, the HOD console to its review queue.
+   */
+  linkBase?: string
+  /**
+   * Renders the student the request belongs to. Staff see requests from
+   * several students, so they need the name next to the row. When it is
+   * absent the column is left out entirely.
+   */
+  student?: (request: LeaveRequest) => string | undefined
 }
 
-/** The list of leave requests, used by the dashboard and the history screen. */
-export default function LeaveRequestTable({ requests, caption }: LeaveRequestTableProps) {
+/** The list of leave requests, shared by the dashboards and the request lists. */
+export default function LeaveRequestTable({
+  requests,
+  caption,
+  linkBase = '/student/requests',
+  student,
+}: LeaveRequestTableProps) {
   return (
     <div className="app-card overflow-hidden">
       <div className="overflow-x-auto">
@@ -22,6 +38,11 @@ export default function LeaveRequestTable({ requests, caption }: LeaveRequestTab
 
           <thead className="bg-muted text-left text-xs tracking-wide text-muted-foreground uppercase">
             <tr>
+              {student && (
+                <th scope="col" className="px-4 py-3 font-medium">
+                  Student
+                </th>
+              )}
               <th scope="col" className="px-4 py-3 font-medium">
                 Type
               </th>
@@ -43,6 +64,11 @@ export default function LeaveRequestTable({ requests, caption }: LeaveRequestTab
           <tbody className="divide-y divide-border">
             {requests.map((request) => (
               <tr key={request.id} className="transition-colors hover:bg-muted/60">
+                {student && (
+                  <td className="px-4 py-3 font-medium text-foreground">
+                    {student(request) ?? '—'}
+                  </td>
+                )}
                 <td className="px-4 py-3 font-medium text-foreground">
                   {REQUEST_TYPE_LABELS[request.request_type]}
                 </td>
@@ -57,7 +83,7 @@ export default function LeaveRequestTable({ requests, caption }: LeaveRequestTab
                 </td>
                 <td className="px-4 py-3 text-right">
                   <Link
-                    to={`/student/requests/${request.id}`}
+                    to={`${linkBase}/${request.id}`}
                     className="text-sm font-medium text-brand-600 hover:text-brand-700 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     View

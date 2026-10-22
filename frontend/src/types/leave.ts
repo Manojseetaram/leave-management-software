@@ -70,6 +70,14 @@ export interface DecisionComment {
   comment?: string
 }
 
+/**
+ * The body of a decision that has to carry a reason. The backend refuses a
+ * rejection or a request for changes without one, so the type says so too.
+ */
+export interface RequiredDecisionComment {
+  comment: string
+}
+
 export interface HistoryEntry {
   id: string
   leave_request_id: string

@@ -7,10 +7,14 @@ import {
   REQUEST_STATUS_LABELS,
   REQUEST_STATUSES,
   REQUEST_TYPE_LABELS,
+  canApprove,
   canComplete,
+  canReject,
+  canRequestChanges,
   canSubmit,
   canWithdraw,
   isEditable,
+  requiresComment,
 } from './leave'
 
 import type { RequestStatus } from '../types/leave'
@@ -73,6 +77,57 @@ describe('leave workflow helpers', () => {
     }
   })
 
+  it('mirrors next_status(status, Approve)', () => {
+    const allowed: RequestStatus[] = ['pending']
+    for (const status of ALL_STATUSES) {
+      expect(canApprove(status)).toBe(allowed.includes(status))
+    }
+  })
+
+  it('mirrors next_status(status, Reject)', () => {
+    const allowed: RequestStatus[] = ['pending']
+    for (const status of ALL_STATUSES) {
+      expect(canReject(status)).toBe(allowed.includes(status))
+    }
+  })
+
+  it('mirrors next_status(status, RequestChanges)', () => {
+    const allowed: RequestStatus[] = ['pending']
+    for (const status of ALL_STATUSES) {
+      expect(canRequestChanges(status)).toBe(allowed.includes(status))
+    }
+  })
+
+  it('offers the HOD every decision at once, and only on a pending request', () => {
+    for (const status of ALL_STATUSES) {
+      const decisions = [canApprove(status), canReject(status), canRequestChanges(status)]
+      expect(decisions.every((allowed) => allowed === (status === 'pending'))).toBe(true)
+    }
+  })
+
+  it('never offers a decision on a terminal status', () => {
+    for (const status of ['draft', 'rejected', 'withdrawn', 'completed'] as RequestStatus[]) {
+      expect(canApprove(status)).toBe(false)
+      expect(canReject(status)).toBe(false)
+      expect(canRequestChanges(status)).toBe(false)
+    }
+  })
+
+  it('never offers a decision on an approved or returned request', () => {
+    expect(canApprove('approved')).toBe(false)
+    expect(canReject('approved')).toBe(false)
+    expect(canRequestChanges('approved')).toBe(false)
+    expect(canApprove('changes_requested')).toBe(false)
+    expect(canReject('changes_requested')).toBe(false)
+    expect(canRequestChanges('changes_requested')).toBe(false)
+  })
+
+  it('does not let the HOD decide a request that is still a draft', () => {
+    expect(canApprove('draft')).toBe(false)
+    expect(canReject('draft')).toBe(false)
+    expect(canRequestChanges('draft')).toBe(false)
+  })
+
   it('never offers an action on a terminal status', () => {
     for (const status of ['rejected', 'withdrawn', 'completed'] as RequestStatus[]) {
       expect(canSubmit(status)).toBe(false)
@@ -86,6 +141,14 @@ describe('leave workflow helpers', () => {
     expect(isEditable('approved')).toBe(false)
     expect(canSubmit('approved')).toBe(false)
     expect(canWithdraw('approved')).toBe(false)
+  })
+})
+
+describe('decision comments', () => {
+  it('mirrors Action::requires_comment', () => {
+    expect(requiresComment('reject')).toBe(true)
+    expect(requiresComment('request_changes')).toBe(true)
+    expect(requiresComment('approve')).toBe(false)
   })
 })
 

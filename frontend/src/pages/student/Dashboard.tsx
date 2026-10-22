@@ -11,9 +11,9 @@ import * as leaveApi from '../../api/leaveApi'
 import * as studentApi from '../../api/studentApi'
 
 import Button from '../../components/common/Button'
+import LeaveRequestTable from '../../components/common/LeaveRequestTable'
 import StatCard from '../../components/common/StatCard'
 import { EmptyState, ErrorState, LoadingState } from '../../components/common/States'
-import LeaveRequestTable from '../../components/student/LeaveRequestTable'
 
 import { useAuth } from '../../context/useAuth'
 import { useRequest } from '../../hooks/useRequest'

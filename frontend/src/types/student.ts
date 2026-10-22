@@ -4,6 +4,15 @@ import type { ListParams } from './api'
 
 export type StudentStatus = 'active' | 'inactive' | 'graduated'
 
+/**
+ * The statuses the list filter accepts.
+ *
+ * The backend filters archived students out by default and only returns them
+ * when they are asked for, so they belong to the filter but not to the
+ * status a record can be updated to.
+ */
+export type StudentFilterStatus = StudentStatus | 'archived'
+
 export interface StudentRecord {
   id: string
   user_id: string
@@ -14,7 +23,7 @@ export interface StudentRecord {
   semester: number
   section: string | null
   admission_year: number | null
-  status: string
+  status: StudentFilterStatus
   created_at: string
   deleted_at: string | null
 }
@@ -60,5 +69,5 @@ export interface CreatedStudent {
 /** Query parameters accepted by GET /students. */
 export interface StudentListParams extends ListParams {
   q?: string
-  status?: StudentStatus
+  status?: StudentFilterStatus
 }

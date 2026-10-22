@@ -7,6 +7,7 @@ import Dashboard from '../pages/hod/Dashboard'
 import LeaveDetails from '../pages/hod/LeaveDetails'
 import LeaveRequests from '../pages/hod/LeaveRequests'
 import Reports from '../pages/hod/Reports'
+import StudentDetails from '../pages/hod/StudentDetails'
 import Students from '../pages/hod/Students'
 
 export default function HodRoutes() {
@@ -18,6 +19,7 @@ export default function HodRoutes() {
         <Route path="requests" element={<LeaveRequests />} />
         <Route path="requests/:id" element={<LeaveDetails />} />
         <Route path="students" element={<Students />} />
+        <Route path="students/:id" element={<StudentDetails />} />
         <Route path="reports" element={<Reports />} />
         <Route path="certificates" element={<Certificates />} />
         <Route path="*" element={<Navigate to="dashboard" replace />} />

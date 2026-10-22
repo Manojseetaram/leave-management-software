@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ArrowLeft, CheckCircle2, Pencil, Send, Undo2 } from 'lucide-react'
@@ -8,6 +8,7 @@ import * as leaveApi from '../../api/leaveApi'
 
 import Badge from '../../components/common/Badge'
 import Button from '../../components/common/Button'
+import Field from '../../components/common/Field'
 import Modal from '../../components/common/Modal'
 import { ErrorState, LoadingState } from '../../components/common/States'
 import DocumentsNotice from '../../components/student/DocumentsNotice'
@@ -316,22 +317,6 @@ export default function LeaveDetails() {
           </>
         }
       />
-    </div>
-  )
-}
-
-interface FieldProps {
-  label: string
-  children: ReactNode
-}
-
-function Field({ label, children }: FieldProps) {
-  return (
-    <div>
-      <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {label}
-      </dt>
-      <dd className="mt-1 text-sm text-foreground">{children}</dd>
     </div>
   )
 }

@@ -64,3 +64,29 @@ export function canWithdraw(status: RequestStatus): boolean {
 export function canComplete(status: RequestStatus): boolean {
   return status === 'approved'
 }
+
+/** Mirrors `next_status(status, Approve)`. Only the HOD may approve. */
+export function canApprove(status: RequestStatus): boolean {
+  return status === 'pending'
+}
+
+/** Mirrors `next_status(status, Reject)`. Only the HOD may reject. */
+export function canReject(status: RequestStatus): boolean {
+  return status === 'pending'
+}
+
+/** Mirrors `next_status(status, RequestChanges)`. Only the HOD may ask for changes. */
+export function canRequestChanges(status: RequestStatus): boolean {
+  return status === 'pending'
+}
+
+/** The decisions the HOD can take on a request. */
+export type DecisionAction = 'approve' | 'reject' | 'request_changes'
+
+/**
+ * Mirrors `Action::requires_comment`: a rejection and a request for changes
+ * have to carry a reason, an approval may carry a note.
+ */
+export function requiresComment(action: DecisionAction): boolean {
+  return action === 'reject' || action === 'request_changes'
+}

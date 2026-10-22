@@ -7,6 +7,7 @@ import type {
   LeaveListParams,
   LeaveRequest,
   NewLeave,
+  RequiredDecisionComment,
   UpdateLeave,
 } from '../types/leave'
 
@@ -56,11 +57,11 @@ export const approve = (id: string, body: DecisionComment = {}) =>
   request<LeaveRequest>(`/leave-requests/${id}/approve`, { method: 'POST', body })
 
 /** POST /leave-requests/:id/reject — only the HOD, a comment is required. */
-export const reject = (id: string, body: DecisionComment) =>
+export const reject = (id: string, body: RequiredDecisionComment) =>
   request<LeaveRequest>(`/leave-requests/${id}/reject`, { method: 'POST', body })
 
 /** POST /leave-requests/:id/request-changes — only the HOD, a comment is required. */
-export const requestChanges = (id: string, body: DecisionComment) =>
+export const requestChanges = (id: string, body: RequiredDecisionComment) =>
   request<LeaveRequest>(`/leave-requests/${id}/request-changes`, { method: 'POST', body })
 
 /** POST /leave-requests/:id/completion — marks an approved request as completed. */

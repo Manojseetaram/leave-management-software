@@ -3,9 +3,10 @@ import { useState } from 'react'
 import * as leaveApi from '../../api/leaveApi'
 
 import Button from '../../components/common/Button'
+import FilterChip from '../../components/common/FilterChip'
+import LeaveRequestTable from '../../components/common/LeaveRequestTable'
 import Pagination from '../../components/common/Pagination'
 import { EmptyState, ErrorState, LoadingState } from '../../components/common/States'
-import LeaveRequestTable from '../../components/student/LeaveRequestTable'
 
 import { useRequest } from '../../hooks/useRequest'
 
@@ -101,28 +102,5 @@ export default function LeaveHistory() {
         </>
       )}
     </div>
-  )
-}
-
-interface FilterChipProps {
-  label: string
-  active: boolean
-  onClick: () => void
-}
-
-function FilterChip({ label, active, onClick }: FilterChipProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-        active
-          ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
-      }`}
-    >
-      {label}
-    </button>
   )
 }
