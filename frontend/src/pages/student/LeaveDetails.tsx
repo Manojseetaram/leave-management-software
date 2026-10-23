@@ -29,7 +29,7 @@ import {
   canSubmit,
   canWithdraw,
   isEditable,
-  REQUEST_STATUS_LABELS,
+  REQUEST_TYPE_LABELS,
 } from '../../utils/leave'
 import { REQUEST_STATUS_TONES } from '../../utils/status'
 
@@ -208,7 +208,7 @@ export default function LeaveDetails() {
       />
 
       <div className="mb-5">
-        <Badge status={request.status} withDot />
+        <Badge status={request.status} />
       </div>
 
       {actionError && (
