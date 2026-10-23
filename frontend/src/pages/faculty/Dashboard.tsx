@@ -7,6 +7,7 @@ import * as authApi from '../../api/authApi'
 
 import Button from '../../components/common/Button'
 import Field from '../../components/common/Field'
+import PageHeader from '../../components/common/PageHeader'
 import { ErrorState, LoadingState } from '../../components/common/States'
 import FacultyNotice from '../../components/faculty/FacultyNotice'
 
@@ -58,19 +59,16 @@ export default function Dashboard() {
 
   return (
     <div className="app-page">
-      <header className="page-header">
-        <div>
-          <h1 className="text-page-title">Dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Your account, your role and the devices that are signed in to it.
-          </p>
-        </div>
-
-        <Button variant="secondary" to="/change-password">
-          <KeyRound className="h-4 w-4" aria-hidden="true" />
-          Change password
-        </Button>
-      </header>
+      <PageHeader
+        title="Dashboard"
+        description="Your account, your role and the devices that are signed in to it."
+        actions={
+          <Button variant="secondary" to="/change-password">
+            <KeyRound className="h-4 w-4" aria-hidden="true" />
+            Change password
+          </Button>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="app-card p-5 md:p-6">

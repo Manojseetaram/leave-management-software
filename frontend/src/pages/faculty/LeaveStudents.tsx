@@ -7,6 +7,7 @@ import Button from '../../components/common/Button'
 import FilterChip from '../../components/common/FilterChip'
 import Input from '../../components/common/Input'
 import LeaveRequestTable from '../../components/common/LeaveRequestTable'
+import PageHeader from '../../components/common/PageHeader'
 import Pagination from '../../components/common/Pagination'
 import Select from '../../components/common/Select'
 import { EmptyState, ErrorState, LoadingState } from '../../components/common/States'
@@ -118,14 +119,10 @@ export default function LeaveStudents() {
   if (unavailable) {
     return (
       <div className="app-page">
-        <header className="page-header">
-          <div>
-            <h1 className="text-page-title">Student requests</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              The students you may read and the leave requests they sent.
-            </p>
-          </div>
-        </header>
+      <PageHeader
+        title="Student requests"
+        description="The students you may read and the leave requests they sent."
+      />
 
         <FacultyNotice
           title="The Faculty roster is not available yet"
@@ -155,15 +152,10 @@ export default function LeaveStudents() {
 
   return (
     <div className="app-page">
-      <header className="page-header">
-        <div>
-          <h1 className="text-page-title">Student requests</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            The students you may read and the leave requests they sent. Deciding a
-            request belongs to the Head of Department.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        title="Student requests"
+        description="The students you may read and the leave requests they sent. Deciding a request belongs to the Head of Department."
+      />
 
       <section>
         <h2 className="text-section-title mb-3">Students</h2>
