@@ -6,6 +6,7 @@ import * as studentApi from '../../api/studentApi'
 
 import Badge from '../../components/common/Badge'
 import Button from '../../components/common/Button'
+import PageHeader from '../../components/common/PageHeader'
 import Field from '../../components/common/Field'
 import { ErrorState, LoadingState } from '../../components/common/States'
 import DecisionPanel from '../../components/hod/DecisionPanel'
@@ -79,34 +80,35 @@ export default function LeaveDetails() {
 
   return (
     <div className="app-page">
-      <header className="page-header">
-        <div>
+      <PageHeader
+        title={REQUEST_TYPE_LABELS[request.request_type]}
+        description={
+          <>
+            {student ? (
+              <>
+                Requested by {student.full_name} ({student.register_number}) Â·{' '}
+              </>
+            ) : null}
+            {formatDateTime(request.created_at)}
+          </>
+        }
+        eyebrow={
           <button
             type="button"
             onClick={() => navigate('/hod/requests')}
-            className="mb-2 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Back to the requests
           </button>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-page-title">{REQUEST_TYPE_LABELS[request.request_type]}</h1>
+        }
+        actions={
+          <>
             <Badge status={request.status} />
-          </div>
-
-          <p className="mt-1 text-sm text-muted-foreground">
-            {student ? (
-              <>
-                Requested by {student.full_name} ({student.register_number}) ·{' '}
-              </>
-            ) : null}
-            {formatDateTime(request.created_at)}
-          </p>
-        </div>
-
-        <DecisionPanel request={request} onDecided={reload} />
-      </header>
+            <DecisionPanel request={request} onDecided={reload} />
+          </>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
