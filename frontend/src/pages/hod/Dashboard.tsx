@@ -6,6 +6,7 @@ import * as leaveApi from '../../api/leaveApi'
 import * as studentApi from '../../api/studentApi'
 
 import Button from '../../components/common/Button'
+import PageHeader from '../../components/common/PageHeader'
 import LeaveRequestTable from '../../components/common/LeaveRequestTable'
 import StatCard from '../../components/common/StatCard'
 import { EmptyState, ErrorState, LoadingState } from '../../components/common/States'
@@ -83,21 +84,20 @@ export default function Dashboard() {
 
   return (
     <div className="app-page">
-      <header className="page-header">
-        <div>
-          <h1 className="text-page-title">Dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {user
-              ? `Welcome back, ${user.full_name}`
-              : 'The leave requests that need your attention'}
-          </p>
-        </div>
-
-        <Button to="/hod/requests">
-          <Clock className="h-4 w-4" aria-hidden="true" />
-          Review the requests
-        </Button>
-      </header>
+      <PageHeader
+        title="Dashboard"
+        description={
+          user
+            ? `Welcome back, ${user.full_name}`
+            : 'The leave requests that need your attention'
+        }
+        actions={
+          <Button to="/hod/requests">
+            <Clock className="h-4 w-4" aria-hidden="true" />
+            Review the requests
+          </Button>
+        }
+      />
 
       {isLoading ? (
         <LoadingState label="Loading the dashboard..." />

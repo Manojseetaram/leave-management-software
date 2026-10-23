@@ -6,6 +6,7 @@ import * as studentApi from '../../api/studentApi'
 import Button from '../../components/common/Button'
 import FilterChip from '../../components/common/FilterChip'
 import Input from '../../components/common/Input'
+import PageHeader from '../../components/common/PageHeader'
 import Pagination from '../../components/common/Pagination'
 import { EmptyState, ErrorState, LoadingState } from '../../components/common/States'
 import StudentTable from '../../components/hod/StudentTable'
@@ -58,15 +59,10 @@ export default function Students() {
 
   return (
     <div className="app-page">
-      <header className="page-header">
-        <div>
-          <h1 className="text-page-title">Students</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Search the roster by register number or name, and see the state of every
-            student account.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        title="Students"
+        description="Search the roster by register number or name, and see the state of every student account."
+      />
 
       <div className="app-card mb-5 p-4">
         <form onSubmit={submitSearch} className="flex flex-wrap items-end gap-3">

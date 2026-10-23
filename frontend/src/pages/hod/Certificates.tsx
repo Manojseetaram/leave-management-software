@@ -5,6 +5,7 @@ import * as leaveApi from '../../api/leaveApi'
 
 import FilterChip from '../../components/common/FilterChip'
 import LeaveRequestTable from '../../components/common/LeaveRequestTable'
+import PageHeader from '../../components/common/PageHeader'
 import Pagination from '../../components/common/Pagination'
 import { EmptyState, ErrorState, LoadingState } from '../../components/common/States'
 
@@ -56,14 +57,10 @@ export default function Certificates() {
 
   return (
     <div className="app-page">
-      <header className="page-header">
-        <div>
-          <h1 className="text-page-title">Certificates</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            The leave requests a certificate can be issued from.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        title="Certificates"
+        description="The leave requests a certificate can be issued from."
+      />
 
       <div className="rounded-lg border border-dashed border-border bg-muted/50 p-4">
         <div className="flex items-start gap-3">

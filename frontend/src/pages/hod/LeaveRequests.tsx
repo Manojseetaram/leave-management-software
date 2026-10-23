@@ -5,6 +5,7 @@ import * as leaveApi from '../../api/leaveApi'
 import Button from '../../components/common/Button'
 import FilterChip from '../../components/common/FilterChip'
 import LeaveRequestTable from '../../components/common/LeaveRequestTable'
+import PageHeader from '../../components/common/PageHeader'
 import Pagination from '../../components/common/Pagination'
 import { EmptyState, ErrorState, LoadingState } from '../../components/common/States'
 
@@ -47,18 +48,15 @@ export default function LeaveRequests() {
 
   return (
     <div className="app-page">
-      <header className="page-header">
-        <div>
-          <h1 className="text-page-title">Leave requests</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Every leave request you can review, and where it stands.
-          </p>
-        </div>
-
-        <Button variant="secondary" to="/hod/students">
-          Student roster
-        </Button>
-      </header>
+      <PageHeader
+        title="Leave requests"
+        description="Every leave request you can review, and where it stands."
+        actions={
+          <Button variant="secondary" to="/hod/students">
+            Student roster
+          </Button>
+        }
+      />
 
       <div
         role="group"

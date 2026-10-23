@@ -6,6 +6,7 @@ import * as hodApi from '../../api/hodApi'
 import * as leaveApi from '../../api/leaveApi'
 
 import FilterChip from '../../components/common/FilterChip'
+import PageHeader from '../../components/common/PageHeader'
 import Pagination from '../../components/common/Pagination'
 import StatCard from '../../components/common/StatCard'
 import { EmptyState, ErrorState, LoadingState } from '../../components/common/States'
@@ -113,15 +114,10 @@ export default function Reports() {
 
   return (
     <div className="app-page">
-      <header className="page-header">
-        <div>
-          <h1 className="text-page-title">Reports</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            The leave totals, the audit trail and the parent messages, counted from
-            the records the system holds.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        title="Reports"
+        description="The leave totals, the audit trail and the parent messages, counted from the records the system holds."
+      />
 
       {isLoading ? (
         <LoadingState label="Loading the report..." />
