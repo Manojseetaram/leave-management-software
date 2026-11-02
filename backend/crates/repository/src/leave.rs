@@ -8,7 +8,8 @@ use sqlx::PgExecutor;
 use uuid::Uuid;
 
 const COLS: &str = "id, student_id, request_type, reason, destination, start_at, end_at, status,
-    submitted_at, decided_by, decided_at, decision_reason, created_at, updated_at";
+    submitted_at, decided_by, decided_at, decision_reason, completed_at, completed_by,
+    completion_note, created_at, updated_at";
 
 pub async fn insert<'e>(
     ex: impl PgExecutor<'e>,
@@ -149,20 +150,44 @@ pub async fn set_status<'e>(
     .map_err(db_err)
 }
 
+/// Records the named action and the resulting status together. The original
+/// decision columns on `leave_requests` are never overwritten by completion.
+pub async fn set_completion<'e>(
+    ex: impl PgExecutor<'e>,
+    id: Uuid,
+    completed_by: Uuid,
+    note: Option<&str>,
+) -> DomainResult<LeaveRequest> {
+    sqlx::query_as::<_, LeaveRequest>(&format!(
+        "UPDATE leave_requests SET status = 'completed', completed_at = now(),
+         completed_by = $2, completion_note = $3, updated_at = now()
+         WHERE id = $1 RETURNING {COLS}"
+    ))
+    .bind(id)
+    .bind(completed_by)
+    .bind(note)
+    .fetch_one(ex)
+    .await
+    .map_err(db_err)
+}
+
 pub async fn insert_history<'e>(
     ex: impl PgExecutor<'e>,
     leave_request_id: Uuid,
     actor_id: Uuid,
+    action: Option<&str>,
     old_status: Option<&str>,
     new_status: &str,
     comment: Option<&str>,
 ) -> DomainResult<()> {
     sqlx::query(
-        "INSERT INTO request_history (leave_request_id, actor_id, old_status, new_status, comment)
-         VALUES ($1, $2, $3, $4, $5)",
+        "INSERT INTO request_history
+         (leave_request_id, actor_id, action, old_status, new_status, comment)
+         VALUES ($1, $2, $3, $4, $5, $6)",
     )
     .bind(leave_request_id)
     .bind(actor_id)
+    .bind(action)
     .bind(old_status)
     .bind(new_status)
     .bind(comment)
@@ -177,7 +202,7 @@ pub async fn list_history<'e>(
     leave_request_id: Uuid,
 ) -> DomainResult<Vec<RequestHistoryEntry>> {
     sqlx::query_as::<_, RequestHistoryEntry>(
-        "SELECT id, leave_request_id, actor_id, old_status, new_status, comment, created_at
+        "SELECT id, leave_request_id, actor_id, action, old_status, new_status, comment, created_at
          FROM request_history WHERE leave_request_id = $1 ORDER BY created_at, id",
     )
     .bind(leave_request_id)

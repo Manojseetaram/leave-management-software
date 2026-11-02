@@ -1,12 +1,4 @@
-/**
- * Faculty types.
- *
- * NOTE: the backend does not expose any Faculty-scoped endpoint yet. Faculty
- * currently holds only the `students:read` permission, which no handler
- * honours, so every read it attempts answers 403/404. These types describe
- * the contract the backend needs to provide — see
- * docs/faculty-api-contract.md for the matching endpoint and permission list.
- */
+/** Faculty types (GET /faculty/students and GET /faculty/leave-requests). */
 
 import type { ListParams } from './api'
 import type { RequestStatus } from './leave'
@@ -25,10 +17,21 @@ export interface FacultyLeaveListParams extends ListParams {
   status?: RequestStatus
 }
 
-/**
- * A row on the Faculty roster: the student record plus the number of leave
- * requests still awaiting a decision.
- */
-export interface FacultyStudentSummary extends StudentRecord {
-  pending_leave_count: number
+/** A student row on the faculty roster. */
+export interface FacultyStudent extends StudentRecord {
+  status: 'active' | 'inactive' | 'graduated' | 'archived'
+}
+
+/** A reduced leave/permission row for faculty. */
+export interface FacultyLeaveRequest {
+  id: string
+  student_id: string
+  register_number: string
+  student_name: string
+  request_type: string
+  start_at: string
+  end_at: string
+  status: RequestStatus
+  submitted_at: string | null
+  decided_at: string | null
 }

@@ -32,11 +32,29 @@ pub struct StudentLogin {
 
 impl TestApp {
     pub async fn new(pool: PgPool) -> Self {
+        Self::new_with_rates(pool, 100, 100).await
+    }
+
+    pub async fn new_with_rates(
+        pool: PgPool,
+        login_rate_limit_per_minute: u32,
+        password_reset_rate_limit_per_minute: u32,
+    ) -> Self {
         let sms = Arc::new(MockSmsProvider::default());
         let settings = Settings {
             phone_key: [7u8; 32],
             session_ttl_hours: 1,
             sms_max_attempts: 3,
+            cors_allowed_origins: vec!["http://localhost:5173".into()],
+            trust_proxy_headers: false,
+            login_rate_limit_per_minute,
+            password_reset_rate_limit_per_minute,
+            password_reset_token_ttl_minutes: 30,
+            password_reset_expose_token: true,
+            storage_dir: std::env::temp_dir().join(format!("leave-test-{}", Uuid::new_v4())),
+            max_upload_bytes: 10 * 1024 * 1024,
+            sms_webhook_secret: Some("test-webhook-secret".into()),
+            sms_provider: "mock".into(),
         };
         let core = Core::new(pool, settings, sms.clone());
         assert!(
@@ -79,6 +97,31 @@ impl TestApp {
 
     pub async fn post(&self, uri: &str, token: &str, body: Value) -> (StatusCode, Value) {
         self.call(Method::POST, uri, Some(token), Some(body)).await
+    }
+
+    /// Sends a signed SMS delivery callback. The signature is optional so the
+    /// unauthenticated/forged paths can be exercised through the real router.
+    pub async fn post_delivery_callback(
+        &self,
+        provider: &str,
+        body: Value,
+        signature: Option<String>,
+    ) -> (StatusCode, Value) {
+        let mut builder = Request::builder()
+            .method(Method::POST)
+            .uri(format!("/api/v1/webhooks/sms/{provider}"));
+        if let Some(signature) = signature {
+            builder = builder.header("x-sms-signature", signature);
+        }
+        let req = builder
+            .header("content-type", "application/json")
+            .body(Body::from(body.to_string()))
+            .unwrap();
+        let resp = self.app.clone().oneshot(req).await.unwrap();
+        let status = resp.status();
+        let bytes = resp.into_body().collect().await.unwrap().to_bytes();
+        let json = serde_json::from_slice(&bytes).unwrap_or(Value::Null);
+        (status, json)
     }
 
     /// Logs in with the temporary password, changes it, and returns a usable token.
@@ -141,6 +184,23 @@ impl TestApp {
         assert_eq!(s, StatusCode::CREATED, "{b}");
         self.onboard("hod@college.edu", b["temporary_password"].as_str().unwrap())
             .await
+    }
+
+    pub async fn faculty_token(&self) -> String {
+        let admin = self.admin_token().await;
+        let (s, b) = self
+            .post(
+                "/api/v1/users",
+                &admin,
+                json!({"email": "faculty@college.edu", "full_name": "Prof. Faculty", "roles": ["faculty"]}),
+            )
+            .await;
+        assert_eq!(s, StatusCode::CREATED, "{b}");
+        self.onboard(
+            "faculty@college.edu",
+            b["temporary_password"].as_str().unwrap(),
+        )
+        .await
     }
 
     pub async fn create_student(

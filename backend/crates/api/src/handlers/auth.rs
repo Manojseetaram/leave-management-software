@@ -70,9 +70,10 @@ pub async fn sessions(
     State(core): State<AppState>,
     AuthUser(p): AuthUser,
 ) -> ApiResult<Json<Value>> {
-    Ok(Json(
-        json!({ "items": service::auth::list_sessions(&core, &p).await? }),
-    ))
+    Ok(Json(json!({
+        "items": service::auth::list_sessions(&core, &p).await?,
+        "current_session_id": p.session_id,
+    })))
 }
 
 pub async fn revoke_session(
@@ -87,9 +88,13 @@ pub async fn revoke_session(
 pub async fn forgot_password(
     State(core): State<AppState>,
     Json(b): Json<ForgotPasswordRequest>,
-) -> ApiResult<StatusCode> {
-    service::auth::forgot_password(&core, b).await?;
-    Ok(StatusCode::OK)
+) -> ApiResult<Json<Value>> {
+    let out = service::auth::forgot_password(&core, b).await?;
+    Ok(Json(json!({
+        "message": "if the account exists, recovery instructions have been issued",
+        "reset_token": out.token,
+        "expires_at": out.expires_at,
+    })))
 }
 
 pub async fn reset_password(

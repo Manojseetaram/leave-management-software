@@ -57,6 +57,42 @@ export interface CreatedStudent {
   temporary_password: string
 }
 
+/** The body of POST /parents. */
+export interface NewParent {
+  student_id: string
+  full_name: string
+  relationship: string
+  phone: string
+  sms_consent: boolean
+}
+
+/** The body of PATCH /parents/:id. Omitted fields are unchanged. */
+export interface UpdateParent {
+  full_name?: string
+  relationship?: string
+  phone?: string
+  active?: boolean
+  sms_consent?: boolean
+}
+
+/** One row of POST /students/import. */
+export interface ImportRowResult {
+  row: number
+  register_number?: string
+  status: 'created' | 'valid' | 'failed'
+  student?: StudentRecord
+  temporary_password?: string
+  error?: string
+}
+
+export interface BulkImportResult {
+  total: number
+  succeeded: number
+  failed: number
+  dry_run: boolean
+  rows: ImportRowResult[]
+}
+
 /** Query parameters accepted by GET /students. */
 export interface StudentListParams extends ListParams {
   q?: string

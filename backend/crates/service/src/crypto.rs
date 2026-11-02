@@ -9,6 +9,7 @@ use argon2::{
     Argon2,
 };
 use domain::error::{DomainError, DomainResult};
+use hmac::{Hmac, Mac};
 use rand::{distributions::Alphanumeric, Rng, RngCore};
 use sha2::{Digest, Sha256};
 
@@ -74,6 +75,33 @@ pub fn temporary_password() -> String {
         .collect()
 }
 
+// ---- webhook signatures ----
+
+type HmacSha256 = Hmac<Sha256>;
+
+pub fn hmac_sha256_hex(secret: &str, body: &[u8]) -> String {
+    let mut mac =
+        <HmacSha256 as Mac>::new_from_slice(secret.as_bytes()).expect("HMAC accepts any key");
+    mac.update(body);
+    hex::encode(mac.finalize().into_bytes())
+}
+
+/// Constant-time comparison of the expected HMAC with the header supplied by
+/// the gateway. Both `hex` and `sha256=<hex>` forms are accepted.
+pub fn verify_hmac_sha256(secret: &str, body: &[u8], provided: &str) -> bool {
+    let provided = provided
+        .trim()
+        .strip_prefix("sha256=")
+        .unwrap_or(provided.trim());
+    let Ok(bytes) = hex::decode(provided) else {
+        return false;
+    };
+    let mut mac =
+        <HmacSha256 as Mac>::new_from_slice(secret.as_bytes()).expect("HMAC accepts any key");
+    mac.update(body);
+    mac.verify_slice(&bytes).is_ok()
+}
+
 // ---- field encryption (parent phone numbers) ----
 
 /// Output layout: 12-byte random nonce || ciphertext+tag.
@@ -135,6 +163,21 @@ mod tests {
         let (a, b) = (temporary_password(), temporary_password());
         assert_eq!(a.len(), 16);
         assert_ne!(a, b);
+    }
+
+    #[test]
+    fn webhook_signatures_are_verified_and_tampering_is_rejected() {
+        let body = br#"{"provider_message_id":"m1","status":"delivered"}"#;
+        let good = hmac_sha256_hex("secret", body);
+        assert!(verify_hmac_sha256("secret", body, &good));
+        assert!(verify_hmac_sha256(
+            "secret",
+            body,
+            &format!("sha256={good}")
+        ));
+        assert!(!verify_hmac_sha256("other-secret", body, &good));
+        assert!(!verify_hmac_sha256("secret", b"{}", &good));
+        assert!(!verify_hmac_sha256("secret", body, "not-hex"));
     }
 
     #[test]

@@ -2,6 +2,7 @@ import { API_BASE_URL } from './apiConfig'
 import { tokenStore } from './tokenStore'
 
 import type { ApiErrorBody, ApiErrorCode } from '../types/api'
+import type { DownloadedDocument } from '../types/document'
 
 /**
  * The single typed entry point to the backend. Every API module goes through
@@ -153,4 +154,53 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   return payload as T
+}
+
+/** Uploads a multipart document. The browser sets the multipart boundary. */
+export async function upload<T>(path: string, formData: FormData): Promise<T> {
+  const response = await fetch(buildUrl(path), {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${tokenStore.getToken() ?? ''}`,
+    },
+    body: formData,
+  })
+
+  const payload = await readBody(response)
+  if (!response.ok) {
+    if (response.status === 401) emit(UNAUTHORIZED_EVENT)
+    throw toApiError(response.status, payload)
+  }
+
+  return payload as T
+}
+
+/** Downloads a document after the backend has authorized the caller. */
+export async function download(path: string): Promise<DownloadedDocument> {
+  const response = await fetch(buildUrl(path), {
+    method: 'GET',
+    headers: {
+      Accept: 'application/octet-stream',
+      Authorization: `Bearer ${tokenStore.getToken() ?? ''}`,
+    },
+  })
+
+  if (!response.ok) {
+    const payload = await readBody(response)
+    if (response.status === 401) emit(UNAUTHORIZED_EVENT)
+    throw toApiError(response.status, payload)
+  }
+
+  const blob = await response.blob()
+  const disposition = response.headers.get('content-disposition') ?? ''
+  const filename =
+    disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i)?.[1]?.replace(/"/g, '') ??
+    'document'
+
+  return {
+    bytes: blob,
+    contentType: response.headers.get('content-type') ?? 'application/octet-stream',
+    originalFilename: filename,
+  }
 }

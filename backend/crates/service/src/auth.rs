@@ -17,6 +17,13 @@ pub struct LoginOutput {
     pub must_change_password: bool,
 }
 
+pub struct ForgotPasswordOutput {
+    /// Only populated when `PASSWORD_RESET_EXPOSE_TOKEN` is deliberately enabled
+    /// for local development. Production deployments must deliver the token out of band.
+    pub token: Option<String>,
+    pub expires_at: Option<DateTime<Utc>>,
+}
+
 pub async fn login(core: &Core, login: &str, password: &str) -> DomainResult<LoginOutput> {
     let login = login.trim();
     if login.is_empty() || password.is_empty() {
@@ -134,7 +141,7 @@ pub async fn change_password(
 }
 
 pub async fn list_sessions(core: &Core, actor: &Principal) -> DomainResult<Vec<SessionInfo>> {
-    sessions::list_for_user(&core.pool, actor.user_id).await
+    sessions::list_for_user(&core.pool, actor.user_id, actor.session_id).await
 }
 
 pub async fn revoke_session(core: &Core, actor: &Principal, session_id: Uuid) -> DomainResult<()> {
@@ -155,7 +162,10 @@ pub async fn revoke_session(core: &Core, actor: &Principal, session_id: Uuid) ->
     }
 }
 
-pub async fn forgot_password(core: &Core, req: ForgotPasswordRequest) -> DomainResult<()> {
+pub async fn forgot_password(
+    core: &Core,
+    req: ForgotPasswordRequest,
+) -> DomainResult<ForgotPasswordOutput> {
     let email = req.email.trim().to_lowercase();
     if email.is_empty() {
         return Err(DomainError::Validation("email is required".into()));
@@ -169,34 +179,55 @@ pub async fn forgot_password(core: &Core, req: ForgotPasswordRequest) -> DomainR
     .await
     .map_err(db_err)?;
 
-    if let Some(user_id) = user {
-        let token = crypto::new_token();
-        let expires_at = Utc::now() + Duration::hours(1);
+    let Some(user_id) = user else {
+        // The response is identical for unknown accounts so recovery cannot be
+        // used to enumerate users.
+        return Ok(ForgotPasswordOutput {
+            token: None,
+            expires_at: None,
+        });
+    };
 
-        password_resets::delete_all_for_user(&core.pool, user_id).await?;
-        password_resets::insert_token(&core.pool, user_id, &crypto::hash_token(&token), expires_at)
-            .await?;
+    let token = crypto::new_token();
+    let expires_at = Utc::now() + Duration::minutes(core.settings.password_reset_token_ttl_minutes);
 
-        // In production, we'd email the token here.
-        // For now, we just log it or let the handler return it in dev.
-        // We return Ok to avoid leaking user existence, but the handler can return the token if in dev.
-    }
+    password_resets::delete_all_for_user(&core.pool, user_id).await?;
+    password_resets::insert_token(&core.pool, user_id, &crypto::hash_token(&token), expires_at)
+        .await?;
+    audit::insert(
+        &core.pool,
+        Some(user_id),
+        "auth.password_reset_requested",
+        "user",
+        Some(user_id),
+        json!({}),
+    )
+    .await?;
 
-    Ok(())
+    // There is no configured email adapter yet. The token is intentionally not
+    // logged or persisted in plaintext. Local development can opt in to receive
+    // it in the response; production must add an out-of-band delivery adapter.
+    Ok(ForgotPasswordOutput {
+        token: core.settings.password_reset_expose_token.then_some(token),
+        expires_at: Some(expires_at),
+    })
 }
 
 pub async fn reset_password(core: &Core, req: ResetPasswordRequest) -> DomainResult<()> {
     validate_password(&req.new_password)?;
 
-    let user_id = password_resets::find_user_by_token(&core.pool, &crypto::hash_token(&req.token))
-        .await?
-        .ok_or(DomainError::Unauthenticated)?;
-
+    let token_hash = crypto::hash_token(&req.token);
     let hash = crypto::hash_password(req.new_password.to_owned()).await?;
 
     let mut tx = core.pool.begin().await.map_err(db_err)?;
+    let user_id = password_resets::consume_token(&mut *tx, &token_hash)
+        .await?
+        .ok_or(DomainError::Unauthenticated)?;
     users::update_password(&mut *tx, user_id, &hash, false).await?;
-    password_resets::delete_token(&mut *tx, &crypto::hash_token(&req.token)).await?;
+    // A recovered account is signed out everywhere, including devices that may
+    // have been compromised.
+    password_resets::delete_all_for_user(&mut *tx, user_id).await?;
+    sessions::revoke_all(&mut *tx, user_id, None).await?;
     audit::insert(
         &mut *tx,
         Some(user_id),

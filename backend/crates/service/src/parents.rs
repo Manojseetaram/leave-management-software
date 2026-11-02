@@ -1,7 +1,7 @@
 use crate::{context::Core, crypto, students::ensure_access};
 use domain::{
     error::{DomainError, DomainResult},
-    models::{NewParent, ParentContact},
+    models::{NewParent, ParentContact, UpdateParent},
     principal::Principal,
     validation::{normalize_indian_mobile, require_text},
 };
@@ -29,6 +29,10 @@ pub async fn add(core: &Core, actor: &Principal, input: NewParent) -> DomainResu
         input.sms_consent,
     )
     .await?;
+    if input.sms_consent {
+        parents::insert_consent_history(&mut *tx, parent.id, actor.user_id, "consent_given")
+            .await?;
+    }
     // The phone number is never written to the audit log.
     audit::insert(
         &mut *tx,
@@ -70,6 +74,81 @@ pub async fn verify(core: &Core, actor: &Principal, id: Uuid) -> DomainResult<Pa
     .await?;
     tx.commit().await.map_err(db_err)?;
     Ok(verified)
+}
+
+/// Students may correct their own parent contact and consent; any phone change
+/// invalidates the previous staff verification so SMS cannot be sent to an
+/// unverified number.
+pub async fn update(
+    core: &Core,
+    actor: &Principal,
+    id: Uuid,
+    input: UpdateParent,
+) -> DomainResult<ParentContact> {
+    let mut tx = core.pool.begin().await.map_err(db_err)?;
+    let existing = parents::get(&mut *tx, id)
+        .await?
+        .ok_or(DomainError::NotFound)?;
+    ensure_access(actor, existing.student_id)?;
+
+    let name = match input.full_name.as_deref() {
+        Some(value) => Some(require_text("full_name", value, 120)?),
+        None => None,
+    };
+    let relationship = match input.relationship.as_deref() {
+        Some(value) => Some(require_text("relationship", value, 40)?),
+        None => None,
+    };
+    let encrypted = match input.phone.as_deref() {
+        Some(value) => {
+            let phone = normalize_indian_mobile(value)?;
+            Some(crypto::encrypt(&core.settings.phone_key, &phone)?)
+        }
+        None => None,
+    };
+    let old_consent = existing.sms_consent_at.is_some();
+
+    let updated = parents::update_fields(
+        &mut *tx,
+        id,
+        name.as_deref(),
+        relationship.as_deref(),
+        encrypted.as_deref(),
+        input.active,
+        input.sms_consent,
+    )
+    .await?;
+
+    if let Some(consent) = input.sms_consent {
+        if consent != old_consent {
+            parents::insert_consent_history(
+                &mut *tx,
+                id,
+                actor.user_id,
+                if consent {
+                    "consent_given"
+                } else {
+                    "consent_revoked"
+                },
+            )
+            .await?;
+        }
+    }
+    audit::insert(
+        &mut *tx,
+        Some(actor.user_id),
+        "parent.update",
+        "parent",
+        Some(id),
+        json!({
+            "phone_changed": encrypted.is_some(),
+            "consent_changed": input.sms_consent.map(|_| true).unwrap_or(false),
+            "active": updated.active,
+        }),
+    )
+    .await?;
+    tx.commit().await.map_err(db_err)?;
+    Ok(updated)
 }
 
 pub async fn list_for_student(

@@ -63,6 +63,10 @@ export const reject = (id: string, body: DecisionComment) =>
 export const requestChanges = (id: string, body: DecisionComment) =>
   request<LeaveRequest>(`/leave-requests/${id}/request-changes`, { method: 'POST', body })
 
+/** POST /leave-requests/:id/return — closes an approved request after return. */
+export const recordReturn = (id: string, body: DecisionComment = {}) =>
+  request<LeaveRequest>(`/leave-requests/${id}/return`, { method: 'POST', body })
+
 /** POST /leave-requests/:id/completion — marks an approved request as completed. */
-export const complete = (id: string) =>
-  request<LeaveRequest>(`/leave-requests/${id}/completion`, { method: 'POST' })
+export const complete = (id: string, body: DecisionComment = {}) =>
+  request<LeaveRequest>(`/leave-requests/${id}/completion`, { method: 'POST', body })
