@@ -77,7 +77,7 @@ impl Config {
     pub fn from_env() -> Result<Self, String> {
         let cors_allowed_origins = parse_origins(
             &env::var("CORS_ALLOWED_ORIGINS")
-                .unwrap_or_else(|_| "http://localhost:5173,http://127.0.0.1:5173".into()),
+                .unwrap_or_else(|_| "http://localhost:5174,http://127.0.0.1:5174".into()),
         )?;
         let login_rate_limit_per_minute = parse_number("LOGIN_RATE_LIMIT_PER_MINUTE", 10u32)?;
         let password_reset_rate_limit_per_minute =

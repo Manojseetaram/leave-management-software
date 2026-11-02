@@ -1,11 +1,11 @@
+@import 'tailwindcss';
+
 /*
-   The dark variant is declared before the Tailwind import: in Tailwind v4.3
-   a directive placed after @import is not consumed and leaks into the
-   built stylesheet.
+   Tailwind v4 processes custom variants after the framework import. Declaring
+   it before @import is invalid CSS (@import must come first) and leaves the
+   directive unconsumed, so dark-mode variants never generate.
 */
 @custom-variant dark (&:where(.dark, .dark *));
-
-@import 'tailwindcss'
 
 /* =========================================================
    DESIGN TOKENS
