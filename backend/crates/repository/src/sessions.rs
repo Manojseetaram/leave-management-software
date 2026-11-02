@@ -40,13 +40,15 @@ pub async fn find_active<'e>(
 pub async fn list_for_user<'e>(
     ex: impl PgExecutor<'e>,
     user_id: Uuid,
+    current_session_id: Uuid,
 ) -> DomainResult<Vec<SessionInfo>> {
     sqlx::query_as::<_, SessionInfo>(
-        "SELECT id, created_at, expires_at FROM sessions
+        "SELECT id, created_at, expires_at, (id = $2) AS current FROM sessions
          WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()
          ORDER BY created_at DESC",
     )
     .bind(user_id)
+    .bind(current_session_id)
     .fetch_all(ex)
     .await
     .map_err(db_err)

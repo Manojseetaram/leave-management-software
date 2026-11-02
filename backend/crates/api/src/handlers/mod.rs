@@ -1,5 +1,8 @@
 pub mod admin;
 pub mod auth;
+pub mod documents;
+pub mod events;
+pub mod faculty;
 pub mod health;
 pub mod leave;
 pub mod notifications;

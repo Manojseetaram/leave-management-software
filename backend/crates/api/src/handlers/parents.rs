@@ -4,7 +4,7 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use domain::models::{NewParent, ParentContact};
+use domain::models::{NewParent, ParentContact, UpdateParent};
 use serde_json::{json, Value};
 use uuid::Uuid;
 
@@ -17,6 +17,15 @@ pub async fn create(
         StatusCode::CREATED,
         Json(service::parents::add(&core, &p, body).await?),
     ))
+}
+
+pub async fn update(
+    State(core): State<AppState>,
+    AuthUser(p): AuthUser,
+    Path(id): Path<Uuid>,
+    Json(body): Json<UpdateParent>,
+) -> ApiResult<Json<ParentContact>> {
+    Ok(Json(service::parents::update(&core, &p, id, body).await?))
 }
 
 pub async fn verify(

@@ -95,7 +95,11 @@ mod tests {
                     "leave:request_changes".to_string(),
                     "reports:view".to_string(),
                 ]),
-                Role::Faculty => permissions.push("students:read".to_string()),
+                Role::Faculty => permissions.extend(vec![
+                    "students:read".to_string(),
+                    "faculty:students:read".to_string(),
+                    "faculty:leave:read".to_string(),
+                ]),
                 Role::Student => {}
             }
         }

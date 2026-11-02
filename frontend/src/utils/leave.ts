@@ -64,3 +64,21 @@ export function canWithdraw(status: RequestStatus): boolean {
 export function canComplete(status: RequestStatus): boolean {
   return status === 'approved'
 }
+
+/** Mirrors `next_status(status, Return)`: return and completion both close. */
+export function canRecordReturn(status: RequestStatus): boolean {
+  return status === 'approved'
+}
+
+export const LEAVE_ACTION_LABELS: Record<
+  'submit' | 'withdraw' | 'approve' | 'reject' | 'request_changes' | 'return' | 'complete',
+  string
+> = {
+  submit: 'Submitted',
+  withdraw: 'Withdrawn',
+  approve: 'Approved',
+  reject: 'Rejected',
+  request_changes: 'Changes requested',
+  return: 'Return recorded',
+  complete: 'Completed',
+}

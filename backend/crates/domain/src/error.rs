@@ -14,6 +14,8 @@ pub enum DomainError {
     NotFound,
     #[error("conflict: {0}")]
     Conflict(String),
+    #[error("service unavailable: {0}")]
+    Unavailable(String),
     #[error("internal error: {0}")]
     Internal(String),
 }

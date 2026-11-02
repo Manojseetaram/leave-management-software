@@ -3,10 +3,11 @@ use async_trait::async_trait;
 use chrono::{DateTime, FixedOffset, Utc};
 use domain::{
     error::{DomainError, DomainResult},
-    models::{NotificationRecord, PageParams, Paged},
+    models::{NotificationDetail, NotificationRecord, PageParams, Paged, SmsDeliveryCallback},
     principal::Principal,
 };
-use repository::notifications;
+use repository::{audit, db_err, notifications};
+use serde_json::json;
 use std::sync::{
     atomic::{AtomicU32, Ordering},
     Mutex,
@@ -85,6 +86,9 @@ pub fn render_message(
         "changes_requested" => format!(
             "Dear Parent/Guardian, the department has asked {student} for additional information about the leave/permission request for {s} to {e}. Please refer to the official portal for details."
         ),
+        "request_completed" => format!(
+            "Dear Parent/Guardian, the leave/permission for {student} ({register_number}) covering {s} to {e} has been recorded as completed or returned. Please refer to the official department portal for details."
+        ),
         _ => return None,
     })
 }
@@ -114,7 +118,11 @@ pub async fn process_batch(core: &Core, batch: i64) -> DomainResult<usize> {
         }
         .await;
         match outcome {
-            Ok(message_id) => notifications::mark_sent(&core.pool, item.id, &message_id).await?,
+            Ok(message_id) => {
+                notifications::mark_sent(&core.pool, item.id, &message_id).await?;
+                notifications::record_attempt(&core.pool, item.id, "sent", Some(&message_id), None)
+                    .await?;
+            }
             Err(err) => {
                 tracing::warn!(notification_id = %item.id, attempt = item.attempt_count, "sms failed: {err}");
                 notifications::mark_failed(
@@ -123,24 +131,162 @@ pub async fn process_batch(core: &Core, batch: i64) -> DomainResult<usize> {
                     &err,
                     backoff_secs(item.attempt_count),
                 )
-                .await?
+                .await?;
+                notifications::record_attempt(&core.pool, item.id, "failed", None, Some(&err))
+                    .await?;
             }
         }
     }
     Ok(count)
 }
 
+#[derive(Default)]
+pub struct NotificationFilter {
+    pub status: Option<String>,
+    pub event_type: Option<String>,
+}
+
 pub async fn list(
     core: &Core,
     actor: &Principal,
+    filter: &NotificationFilter,
     page: PageParams,
 ) -> DomainResult<Paged<NotificationRecord>> {
     if !actor.can_manage_students() {
         return Err(DomainError::Forbidden);
     }
-    let items = notifications::list(&core.pool, page.limit(), page.offset()).await?;
-    let total = notifications::count(&core.pool).await?;
+    let status = filter
+        .status
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let event_type = filter
+        .event_type
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let items =
+        notifications::list(&core.pool, status, event_type, page.limit(), page.offset()).await?;
+    let total = notifications::count(&core.pool, status, event_type).await?;
     Ok(Paged::new(items, total, page))
+}
+
+pub async fn show(
+    core: &Core,
+    actor: &Principal,
+    id: uuid::Uuid,
+) -> DomainResult<NotificationDetail> {
+    if !actor.can_manage_students() {
+        return Err(DomainError::Forbidden);
+    }
+    let notification = notifications::get(&core.pool, id)
+        .await?
+        .ok_or(DomainError::NotFound)?;
+    let attempts = notifications::attempts(&core.pool, id).await?;
+    Ok(NotificationDetail {
+        notification,
+        attempts,
+    })
+}
+
+/// Verifies the gateway signature over the exact raw body, validates the
+/// provider and status, then applies the callback idempotently. Callbacks never
+/// expose phone numbers or message text in logs or audit metadata.
+pub async fn handle_delivery_callback(
+    core: &Core,
+    provider: &str,
+    signature: Option<&str>,
+    body: &[u8],
+) -> DomainResult<NotificationDetail> {
+    if !provider.eq_ignore_ascii_case(&core.settings.sms_provider) {
+        return Err(DomainError::NotFound);
+    }
+    let secret = core
+        .settings
+        .sms_webhook_secret
+        .as_deref()
+        .ok_or_else(|| DomainError::Unavailable("SMS callbacks are not configured".into()))?;
+    let signature = signature.ok_or(DomainError::Unauthenticated)?;
+    if !crypto::verify_hmac_sha256(secret, body, signature) {
+        return Err(DomainError::Unauthenticated);
+    }
+
+    let callback: SmsDeliveryCallback = serde_json::from_slice(body)
+        .map_err(|_| DomainError::Validation("invalid callback body".into()))?;
+    let status = callback.status.trim().to_ascii_lowercase();
+    if !matches!(status.as_str(), "delivered" | "failed") {
+        return Err(DomainError::Validation(
+            "callback status must be delivered or failed".into(),
+        ));
+    }
+    let provider_message_id = callback.provider_message_id.trim();
+    if provider_message_id.is_empty() || provider_message_id.len() > 255 {
+        return Err(DomainError::Validation(
+            "provider_message_id is required".into(),
+        ));
+    }
+    let error = callback
+        .error
+        .map(|e| e.trim().to_string())
+        .filter(|e| !e.is_empty());
+    if error.as_ref().is_some_and(|e| e.chars().count() > 1000) {
+        return Err(DomainError::Validation(
+            "callback error must be at most 1000 characters".into(),
+        ));
+    }
+
+    let mut tx = core.pool.begin().await.map_err(db_err)?;
+    let notification = notifications::find_by_provider_message_id(&mut *tx, provider_message_id)
+        .await?
+        .ok_or(DomainError::NotFound)?;
+    let idempotency_key = format!(
+        "{}:{}:{}",
+        provider.to_ascii_lowercase(),
+        provider_message_id,
+        status
+    );
+    let maybe_updated = notifications::apply_delivery_callback(
+        &mut *tx,
+        notification.id,
+        &status,
+        error.as_deref(),
+        &idempotency_key,
+    )
+    .await?;
+
+    if maybe_updated.is_some() {
+        let attempt_status = if status == "delivered" {
+            "delivered"
+        } else {
+            "callback_failed"
+        };
+        notifications::record_attempt(
+            &mut *tx,
+            notification.id,
+            attempt_status,
+            Some(provider_message_id),
+            error.as_deref(),
+        )
+        .await?;
+        audit::insert(
+            &mut *tx,
+            None,
+            "notification.callback",
+            "notification",
+            Some(notification.id),
+            json!({ "provider": provider, "status": status }),
+        )
+        .await?;
+    }
+    let current = notifications::get(&mut *tx, notification.id)
+        .await?
+        .ok_or(DomainError::NotFound)?;
+    let attempts = notifications::attempts(&mut *tx, notification.id).await?;
+    tx.commit().await.map_err(db_err)?;
+    Ok(NotificationDetail {
+        notification: current,
+        attempts,
+    })
 }
 
 #[cfg(test)]

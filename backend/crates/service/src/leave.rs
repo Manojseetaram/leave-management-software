@@ -82,7 +82,16 @@ pub async fn create(core: &Core, actor: &Principal, input: NewLeave) -> DomainRe
         input.end_at,
     )
     .await?;
-    leave::insert_history(&mut *tx, req.id, actor.user_id, None, "draft", None).await?;
+    leave::insert_history(
+        &mut *tx,
+        req.id,
+        actor.user_id,
+        Some("create"),
+        None,
+        "draft",
+        None,
+    )
+    .await?;
     audit::insert(
         &mut *tx,
         Some(actor.user_id),
@@ -228,18 +237,25 @@ pub async fn transition(
     let decision = action
         .is_decision()
         .then_some((actor.user_id, comment.as_deref()));
-    let updated = leave::set_status(
-        &mut *tx,
-        id,
-        next.as_str(),
-        action == Action::Submit,
-        decision,
-    )
-    .await?;
+    // Return and completion both close an approved request, but they are
+    // recorded as distinct actions. The original reviewer decision is kept.
+    let updated = if matches!(action, Action::Return | Action::Complete) {
+        leave::set_completion(&mut *tx, id, actor.user_id, comment.as_deref()).await?
+    } else {
+        leave::set_status(
+            &mut *tx,
+            id,
+            next.as_str(),
+            action == Action::Submit,
+            decision,
+        )
+        .await?
+    };
     leave::insert_history(
         &mut *tx,
         id,
         actor.user_id,
+        Some(action.as_str()),
         Some(current.as_str()),
         next.as_str(),
         comment.as_deref(),

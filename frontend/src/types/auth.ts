@@ -42,6 +42,8 @@ export interface SessionInfo {
   id: string
   created_at: string
   expires_at: string
+  /** True for the session that made the request. */
+  current: boolean
 }
 
 /** The value published by the AuthContext. */

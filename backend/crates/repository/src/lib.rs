@@ -1,6 +1,10 @@
 //! All SQL lives here. Functions take any sqlx executor, so the service layer
 //! decides whether they run on the pool or inside a transaction.
+pub mod admin;
 pub mod audit;
+pub mod documents;
+pub mod events;
+pub mod faculty;
 pub mod leave;
 pub mod notifications;
 pub mod parents;

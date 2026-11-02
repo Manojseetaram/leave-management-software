@@ -10,7 +10,6 @@ import Badge from '../../components/common/Badge'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { ErrorState, LoadingState } from '../../components/common/States'
-import DocumentsNotice from '../../components/student/DocumentsNotice'
 
 import { useRequest } from '../../hooks/useRequest'
 
@@ -24,6 +23,8 @@ import {
 } from '../../utils/leave'
 
 import type { HistoryEntry, LeaveRequest } from '../../types/leave'
+
+import DocumentUploadPanel from '../../components/student/DocumentUploadPanel'
 
 type PendingAction = 'withdraw' | 'complete'
 
@@ -253,7 +254,7 @@ export default function LeaveDetails() {
         </div>
 
         <aside className="space-y-4">
-          <DocumentsNotice />
+          <DocumentUploadPanel request={request} />
 
           <div className="app-card p-4">
             <h2 className="text-sm font-semibold text-foreground">What happens next</h2>

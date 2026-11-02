@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
+import AdminRoutes from './AdminRoutes'
 import HodRoutes from './HodRoutes'
 import FacultyRoutes from './FacultyRoutes'
 import ProtectedRoute from './ProtectedRoute'
@@ -45,8 +46,12 @@ export default function AppRoutes() {
           <Route path="/student/*" element={<StudentRoutes />} />
         </Route>
 
-        <Route element={<RoleRoute roles={['hod', 'admin']} />}>
+        <Route element={<RoleRoute roles={['hod']} />}>
           <Route path="/hod/*" element={<HodRoutes />} />
+        </Route>
+
+        <Route element={<RoleRoute roles={['admin']} />}>
+          <Route path="/admin/*" element={<AdminRoutes />} />
         </Route>
 
         <Route element={<RoleRoute roles={['faculty']} />}>

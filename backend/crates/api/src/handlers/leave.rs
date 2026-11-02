@@ -125,4 +125,5 @@ action_handler!(withdraw, Action::Withdraw);
 action_handler!(approve, Action::Approve);
 action_handler!(reject, Action::Reject);
 action_handler!(request_changes, Action::RequestChanges);
+action_handler!(record_return, Action::Return);
 action_handler!(complete, Action::Complete);

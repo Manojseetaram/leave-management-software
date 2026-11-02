@@ -1,10 +1,11 @@
-import { ClipboardList, LayoutDashboard } from 'lucide-react'
+import { ClipboardList, LayoutDashboard, Users } from 'lucide-react'
 
 import AppSidebar, { type NavItem } from '../common/AppSidebar'
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', to: '/faculty/dashboard', icon: LayoutDashboard },
-  { label: 'Student requests', to: '/faculty/students', icon: ClipboardList },
+  { label: 'Students', to: '/faculty/students', icon: Users },
+  { label: 'Student requests', to: '/faculty/requests', icon: ClipboardList },
 ]
 
 interface FacultySidebarProps {

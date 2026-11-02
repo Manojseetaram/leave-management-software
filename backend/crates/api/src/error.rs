@@ -44,6 +44,11 @@ impl IntoResponse for ApiError {
                 "resource not found".to_string(),
             ),
             DomainError::Conflict(m) => (StatusCode::CONFLICT, "conflict", m.clone()),
+            DomainError::Unavailable(m) => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "service_unavailable",
+                m.clone(),
+            ),
             DomainError::Internal(m) => {
                 tracing::error!(error = %m, "internal error");
                 (

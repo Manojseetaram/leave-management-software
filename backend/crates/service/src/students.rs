@@ -10,6 +10,7 @@ use domain::{
 use repository::{audit, db_err, leave, sessions, students, users};
 use serde::Serialize;
 use serde_json::json;
+use std::collections::HashSet;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize)]
@@ -27,36 +28,59 @@ fn require_manager(actor: &Principal) -> DomainResult<()> {
     }
 }
 
+struct ValidatedStudent {
+    register_number: String,
+    name: String,
+    email: Option<String>,
+    semester: i16,
+    section: Option<String>,
+    admission_year: Option<i16>,
+}
+
+fn validate_new(input: &NewStudent) -> DomainResult<ValidatedStudent> {
+    Ok(ValidatedStudent {
+        register_number: validate_register_number(&input.register_number)?,
+        name: require_text("full_name", &input.full_name, 120)?,
+        email: input
+            .email
+            .as_deref()
+            .filter(|e| !e.trim().is_empty())
+            .map(validate_email)
+            .transpose()?,
+        semester: validate_semester(input.semester)?,
+        section: optional_text("section", input.section.as_deref(), 10)?,
+        admission_year: input.admission_year,
+    })
+}
+
 pub async fn create(
     core: &Core,
     actor: &Principal,
     input: NewStudent,
 ) -> DomainResult<CreatedStudent> {
     require_manager(actor)?;
-    let register_number = validate_register_number(&input.register_number)?;
-    let name = require_text("full_name", &input.full_name, 120)?;
-    let email = input
-        .email
-        .as_deref()
-        .filter(|e| !e.trim().is_empty())
-        .map(validate_email)
-        .transpose()?;
-    let semester = validate_semester(input.semester)?;
-    let section = optional_text("section", input.section.as_deref(), 10)?;
+    let validated = validate_new(&input)?;
 
     let temporary_password = crypto::temporary_password();
     let hash = crypto::hash_password(temporary_password.clone()).await?;
 
     let mut tx = core.pool.begin().await.map_err(db_err)?;
-    let user_id = users::insert_user(&mut *tx, email.as_deref(), &hash, &name, true).await?;
+    let user_id = users::insert_user(
+        &mut *tx,
+        validated.email.as_deref(),
+        &hash,
+        &validated.name,
+        true,
+    )
+    .await?;
     users::assign_role(&mut *tx, user_id, Role::Student).await?;
     let id = students::insert(
         &mut *tx,
         user_id,
-        &register_number,
-        semester,
-        section.as_deref(),
-        input.admission_year,
+        &validated.register_number,
+        validated.semester,
+        validated.section.as_deref(),
+        validated.admission_year,
     )
     .await?;
     audit::insert(
@@ -65,7 +89,7 @@ pub async fn create(
         "student.create",
         "student",
         Some(id),
-        json!({ "register_number": register_number }),
+        json!({ "register_number": validated.register_number }),
     )
     .await?;
     let student = students::get(&mut *tx, id)
@@ -75,6 +99,158 @@ pub async fn create(
     Ok(CreatedStudent {
         student,
         temporary_password,
+    })
+}
+
+#[derive(Debug, Serialize)]
+pub struct ImportRowResult {
+    /// 1-based row number so an operator can point at the imported file.
+    pub row: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub register_number: Option<String>,
+    /// `created`, `valid` (dry run) or `failed`.
+    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub student: Option<StudentRecord>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temporary_password: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BulkImportResult {
+    pub total: usize,
+    pub succeeded: usize,
+    pub failed: usize,
+    pub dry_run: bool,
+    pub rows: Vec<ImportRowResult>,
+}
+
+fn import_error(error: DomainError) -> String {
+    match error {
+        DomainError::Validation(message) | DomainError::Conflict(message) => message,
+        _ => "student could not be created".to_string(),
+    }
+}
+
+/// Imports up to 500 students. Each row is independent so one bad record does
+/// not discard the rest of the batch. `dry_run` validates and checks duplicates
+/// without creating accounts or issuing credentials.
+pub async fn bulk_import(
+    core: &Core,
+    actor: &Principal,
+    inputs: Vec<NewStudent>,
+    dry_run: bool,
+) -> DomainResult<BulkImportResult> {
+    require_manager(actor)?;
+    if !actor.has_permission("students:import") {
+        return Err(DomainError::Forbidden);
+    }
+    if inputs.is_empty() {
+        return Err(DomainError::Validation(
+            "at least one student is required".into(),
+        ));
+    }
+    if inputs.len() > 500 {
+        return Err(DomainError::Validation(
+            "a bulk import is limited to 500 students".into(),
+        ));
+    }
+
+    let mut seen = HashSet::new();
+    let mut rows = Vec::with_capacity(inputs.len());
+    for (index, input) in inputs.into_iter().enumerate() {
+        let row = index + 1;
+        let validated = match validate_new(&input) {
+            Ok(v) => v,
+            Err(error) => {
+                rows.push(ImportRowResult {
+                    row,
+                    register_number: Some(input.register_number),
+                    status: "failed".into(),
+                    student: None,
+                    temporary_password: None,
+                    error: Some(import_error(error)),
+                });
+                continue;
+            }
+        };
+
+        if !seen.insert(validated.register_number.clone()) {
+            rows.push(ImportRowResult {
+                row,
+                register_number: Some(validated.register_number),
+                status: "failed".into(),
+                student: None,
+                temporary_password: None,
+                error: Some("duplicate register_number in import file".into()),
+            });
+            continue;
+        }
+
+        if dry_run {
+            match students::register_exists(&core.pool, &validated.register_number).await? {
+                true => rows.push(ImportRowResult {
+                    row,
+                    register_number: Some(validated.register_number),
+                    status: "failed".into(),
+                    student: None,
+                    temporary_password: None,
+                    error: Some("register_number already exists".into()),
+                }),
+                false => rows.push(ImportRowResult {
+                    row,
+                    register_number: Some(validated.register_number),
+                    status: "valid".into(),
+                    student: None,
+                    temporary_password: None,
+                    error: None,
+                }),
+            }
+            continue;
+        }
+
+        match create(core, actor, input).await {
+            Ok(created) => rows.push(ImportRowResult {
+                row,
+                register_number: Some(created.student.register_number.clone()),
+                status: "created".into(),
+                student: Some(created.student),
+                temporary_password: Some(created.temporary_password),
+                error: None,
+            }),
+            Err(error) => rows.push(ImportRowResult {
+                row,
+                register_number: Some(validated.register_number),
+                status: "failed".into(),
+                student: None,
+                temporary_password: None,
+                error: Some(import_error(error)),
+            }),
+        }
+    }
+
+    let succeeded = rows.iter().filter(|r| r.status != "failed").count();
+    let failed = rows.len() - succeeded;
+    if !dry_run {
+        audit::insert(
+            &core.pool,
+            Some(actor.user_id),
+            "student.import",
+            "student_import",
+            None,
+            json!({ "total": rows.len(), "succeeded": succeeded, "failed": failed }),
+        )
+        .await?;
+    }
+
+    Ok(BulkImportResult {
+        total: rows.len(),
+        succeeded,
+        failed,
+        dry_run,
+        rows,
     })
 }
 

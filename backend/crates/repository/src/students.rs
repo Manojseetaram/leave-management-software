@@ -30,6 +30,19 @@ pub async fn insert<'e>(
     .map_err(db_err)
 }
 
+pub async fn register_exists<'e>(
+    ex: impl PgExecutor<'e>,
+    register_number: &str,
+) -> DomainResult<bool> {
+    sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM students WHERE register_number = $1)",
+    )
+    .bind(register_number)
+    .fetch_one(ex)
+    .await
+    .map_err(db_err)
+}
+
 pub async fn get<'e>(ex: impl PgExecutor<'e>, id: Uuid) -> DomainResult<Option<StudentRecord>> {
     sqlx::query_as::<_, StudentRecord>(&format!("{SELECT} WHERE s.id = $1"))
         .bind(id)

@@ -46,6 +46,10 @@ pub struct LeaveRequest {
     pub decided_by: Option<Uuid>,
     pub decided_at: Option<DateTime<Utc>>,
     pub decision_reason: Option<String>,
+    /// Completion/return is deliberately separate from the original decision.
+    pub completed_at: Option<DateTime<Utc>>,
+    pub completed_by: Option<Uuid>,
+    pub completion_note: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -56,10 +60,44 @@ pub struct RequestHistoryEntry {
     pub id: Uuid,
     pub leave_request_id: Uuid,
     pub actor_id: Uuid,
+    /// The named action that produced this entry, e.g. `submit` or `return`.
+    pub action: Option<String>,
     pub old_status: Option<String>,
     pub new_status: String,
     pub comment: Option<String>,
     pub created_at: DateTime<Utc>,
+}
+
+/// Deliberately reduced student view for faculty. Email and archive state are
+/// excluded because faculty are only entitled to attendance-relevant fields.
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct FacultyStudent {
+    pub id: Uuid,
+    pub register_number: String,
+    pub full_name: String,
+    pub department: String,
+    pub semester: i16,
+    pub section: Option<String>,
+    pub admission_year: Option<i16>,
+    pub status: String,
+}
+
+/// Reduced leave/permission view for faculty: status and dates only, with no
+/// reason, destination, documents or decision notes.
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct FacultyLeaveRequest {
+    pub id: Uuid,
+    pub student_id: Uuid,
+    pub register_number: String,
+    pub student_name: String,
+    pub request_type: String,
+    pub start_at: DateTime<Utc>,
+    pub end_at: DateTime<Utc>,
+    pub status: String,
+    pub submitted_at: Option<DateTime<Utc>>,
+    pub decided_at: Option<DateTime<Utc>>,
 }
 
 /// Parent contact as exposed by the API. The phone number is deliberately absent.
@@ -82,6 +120,7 @@ pub struct SessionInfo {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
     pub expires_at: DateTime<Utc>,
+    pub current: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -98,6 +137,76 @@ pub struct AuditLogEntry {
 
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct DashboardCounts {
+    pub total_students: i64,
+    pub active_students: i64,
+    pub pending_requests: i64,
+    pub approved_requests: i64,
+    pub completed_requests: i64,
+    pub unverified_documents: i64,
+    pub queued_notifications: i64,
+    pub failed_notifications: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct LeaveReportSummary {
+    pub total: i64,
+    pub pending: i64,
+    pub changes_requested: i64,
+    pub approved: i64,
+    pub rejected: i64,
+    pub withdrawn: i64,
+    pub completed: i64,
+    pub personal_leave: i64,
+    pub medical_leave: i64,
+    pub event_permission: i64,
+    pub other: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct EventRecord {
+    pub id: Uuid,
+    pub leave_request_id: Uuid,
+    pub student_id: Uuid,
+    pub title: String,
+    pub organizer: String,
+    pub event_website: Option<String>,
+    pub location: Option<String>,
+    pub start_at: DateTime<Utc>,
+    pub end_at: DateTime<Utc>,
+    pub participation_details: Option<String>,
+    pub created_by: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct DocumentRecord {
+    pub id: Uuid,
+    pub leave_request_id: Option<Uuid>,
+    pub event_id: Option<Uuid>,
+    pub uploader_id: Uuid,
+    pub document_type: String,
+    pub original_filename: String,
+    pub content_type: String,
+    pub size_bytes: i64,
+    pub checksum_sha256: String,
+    pub malware_scan_status: String,
+    pub verification_status: String,
+    pub verified_by: Option<Uuid>,
+    pub verified_at: Option<DateTime<Utc>>,
+    pub review_notes: Option<String>,
+    pub created_at: DateTime<Utc>,
+    /// Never serialized to API clients.
+    #[serde(skip_serializing)]
+    pub storage_key: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct NotificationRecord {
     pub id: Uuid,
     pub leave_request_id: Uuid,
@@ -109,6 +218,33 @@ pub struct NotificationRecord {
     pub last_error: Option<String>,
     pub created_at: DateTime<Utc>,
     pub sent_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct NotificationAttempt {
+    pub id: i64,
+    pub notification_id: Uuid,
+    pub attempt_number: i32,
+    pub status: String,
+    pub provider_message_id: Option<String>,
+    pub error: Option<String>,
+    pub attempted_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct NotificationDetail {
+    #[serde(flatten)]
+    pub notification: NotificationRecord,
+    pub attempts: Vec<NotificationAttempt>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SmsDeliveryCallback {
+    pub provider_message_id: String,
+    /// `delivered` or `failed`.
+    pub status: String,
+    pub error: Option<String>,
 }
 
 // ---------- commands (request bodies) ----------
@@ -170,6 +306,45 @@ pub struct NewParent {
     pub phone: String,
     #[serde(default)]
     pub sms_consent: bool,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct UpdateParent {
+    pub full_name: Option<String>,
+    pub relationship: Option<String>,
+    pub phone: Option<String>,
+    pub sms_consent: Option<bool>,
+    pub active: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct NewEvent {
+    pub leave_request_id: Uuid,
+    pub title: String,
+    pub organizer: String,
+    pub event_website: Option<String>,
+    pub location: Option<String>,
+    pub start_at: DateTime<Utc>,
+    pub end_at: DateTime<Utc>,
+    pub participation_details: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct UpdateEvent {
+    pub title: Option<String>,
+    pub organizer: Option<String>,
+    pub event_website: Option<String>,
+    pub location: Option<String>,
+    pub start_at: Option<DateTime<Utc>>,
+    pub end_at: Option<DateTime<Utc>>,
+    pub participation_details: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct DocumentVerification {
+    /// `verified` or `rejected`.
+    pub status: String,
+    pub review_notes: Option<String>,
 }
 
 // ---------- pagination ----------

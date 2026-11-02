@@ -49,6 +49,60 @@ pub async fn list_for_student<'e>(
     .map_err(db_err)
 }
 
+#[allow(clippy::too_many_arguments)]
+pub async fn update_fields<'e>(
+    ex: impl PgExecutor<'e>,
+    id: Uuid,
+    full_name: Option<&str>,
+    relationship: Option<&str>,
+    phone_encrypted: Option<&[u8]>,
+    active: Option<bool>,
+    sms_consent: Option<bool>,
+) -> DomainResult<ParentContact> {
+    sqlx::query_as::<_, ParentContact>(&format!(
+        "UPDATE parents SET
+           full_name = COALESCE($2, full_name),
+           relationship = COALESCE($3, relationship),
+           phone_encrypted = COALESCE($4::bytea, phone_encrypted),
+           verified_at = CASE WHEN $4::bytea IS NOT NULL THEN NULL ELSE verified_at END,
+           active = COALESCE($5, active),
+           sms_consent_at = CASE
+             WHEN $6::boolean IS NULL THEN sms_consent_at
+             WHEN $6 THEN COALESCE(sms_consent_at, now())
+             ELSE NULL
+           END
+         WHERE id = $1 RETURNING {COLS}"
+    ))
+    .bind(id)
+    .bind(full_name)
+    .bind(relationship)
+    .bind(phone_encrypted)
+    .bind(active)
+    .bind(sms_consent)
+    .fetch_one(ex)
+    .await
+    .map_err(db_err)
+}
+
+pub async fn insert_consent_history<'e>(
+    ex: impl PgExecutor<'e>,
+    parent_id: Uuid,
+    actor_id: Uuid,
+    action: &str,
+) -> DomainResult<()> {
+    sqlx::query(
+        "INSERT INTO parent_consent_history (parent_id, actor_id, action)
+         VALUES ($1, $2, $3)",
+    )
+    .bind(parent_id)
+    .bind(actor_id)
+    .bind(action)
+    .execute(ex)
+    .await
+    .map(|_| ())
+    .map_err(db_err)
+}
+
 pub async fn mark_verified<'e>(ex: impl PgExecutor<'e>, id: Uuid) -> DomainResult<ParentContact> {
     sqlx::query_as::<_, ParentContact>(&format!(
         "UPDATE parents SET verified_at = COALESCE(verified_at, now()) WHERE id = $1 RETURNING {COLS}"

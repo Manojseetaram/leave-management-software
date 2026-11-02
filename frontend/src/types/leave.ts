@@ -23,6 +23,7 @@ export type LeaveAction =
   | 'approve'
   | 'reject'
   | 'request_changes'
+  | 'return'
   | 'complete'
 
 export interface LeaveRequest {
@@ -38,6 +39,9 @@ export interface LeaveRequest {
   decided_by: string | null
   decided_at: string | null
   decision_reason: string | null
+  completed_at: string | null
+  completed_by: string | null
+  completion_note: string | null
   created_at: string
   updated_at: string
 }
@@ -74,6 +78,8 @@ export interface HistoryEntry {
   id: string
   leave_request_id: string
   actor_id: string
+  /** The named action, e.g. `submit`, `approve`, `return`, `complete`. */
+  action: LeaveAction | null
   old_status: RequestStatus | null
   new_status: RequestStatus
   comment: string | null

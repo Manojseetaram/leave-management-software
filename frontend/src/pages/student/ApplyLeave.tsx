@@ -7,7 +7,6 @@ import * as leaveApi from '../../api/leaveApi'
 
 import Button from '../../components/common/Button'
 import { ErrorState, LoadingState } from '../../components/common/States'
-import DocumentsNotice from '../../components/student/DocumentsNotice'
 import LeaveForm, { type LeaveFormIntent } from '../../components/student/LeaveForm'
 
 import { useRequest } from '../../hooks/useRequest'
@@ -150,7 +149,12 @@ export default function ApplyLeave() {
           </div>
 
           <aside className="space-y-4">
-            <DocumentsNotice />
+            <div className="app-card p-4">
+              <h2 className="text-sm font-semibold text-foreground">Documents and evidence</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Save the request, then open it to upload supporting documents or event evidence.
+              </p>
+            </div>
 
             <div className="app-card p-4">
               <h2 className="text-sm font-semibold text-foreground">How this works</h2>

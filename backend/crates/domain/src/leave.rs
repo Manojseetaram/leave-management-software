@@ -82,6 +82,7 @@ pub enum Action {
     Approve,
     Reject,
     RequestChanges,
+    Return,
     Complete,
 }
 
@@ -93,6 +94,7 @@ impl Action {
             Action::Approve => "approve",
             Action::Reject => "reject",
             Action::RequestChanges => "request changes on",
+            Action::Return => "record return for",
             Action::Complete => "complete",
         }
     }
@@ -117,7 +119,8 @@ impl Action {
             Action::Approve => Some("request_approved"),
             Action::Reject => Some("request_rejected"),
             Action::RequestChanges => Some("changes_requested"),
-            Action::Withdraw | Action::Complete => None,
+            Action::Return | Action::Complete => Some("request_completed"),
+            Action::Withdraw => None,
         }
     }
 }
@@ -133,7 +136,7 @@ pub fn next_status(current: RequestStatus, action: Action) -> DomainResult<Reque
         (Pending, Approve) => Ok(Approved),
         (Pending, Reject) => Ok(Rejected),
         (Pending, RequestChanges) => Ok(ChangesRequested),
-        (Approved, Complete) => Ok(Completed),
+        (Approved, Return | Complete) => Ok(Completed),
         (from, action) => Err(DomainError::Conflict(format!(
             "cannot {} a request that is {}",
             action.as_str(),
@@ -157,6 +160,7 @@ mod tests {
         (Pending, Approve, Approved),
         (Pending, Reject, Rejected),
         (Pending, RequestChanges, ChangesRequested),
+        (Approved, Return, Completed),
         (Approved, Complete, Completed),
     ];
 
@@ -169,7 +173,15 @@ mod tests {
 
     #[test]
     fn every_other_combination_is_rejected() {
-        let all_actions = [Submit, Withdraw, Approve, Reject, RequestChanges, Complete];
+        let all_actions = [
+            Submit,
+            Withdraw,
+            Approve,
+            Reject,
+            RequestChanges,
+            Return,
+            Complete,
+        ];
         for from in RequestStatus::ALL {
             for action in all_actions {
                 let valid = VALID.iter().any(|(f, a, _)| *f == from && *a == action);
@@ -191,7 +203,15 @@ mod tests {
     #[test]
     fn terminal_states_are_final() {
         for from in [Rejected, Withdrawn, Completed] {
-            for action in [Submit, Withdraw, Approve, Reject, RequestChanges, Complete] {
+            for action in [
+                Submit,
+                Withdraw,
+                Approve,
+                Reject,
+                RequestChanges,
+                Return,
+                Complete,
+            ] {
                 assert!(next_status(from, action).is_err());
             }
         }

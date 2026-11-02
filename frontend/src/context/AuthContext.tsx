@@ -24,8 +24,8 @@ interface AuthProviderProps {
 function homePathFor(roles: Role[]): string {
   if (roles.includes('hod')) return '/hod'
   if (roles.includes('faculty')) return '/faculty'
+  if (roles.includes('admin')) return '/admin'
   if (roles.includes('student')) return '/student'
-  if (roles.includes('admin')) return '/hod'
   return '/login'
 }
 
