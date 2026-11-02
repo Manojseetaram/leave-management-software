@@ -5,7 +5,6 @@ use axum::{
     Json,
 };
 use domain::{
-    error::DomainError,
     leave::Action,
     models::{LeaveRequest, NewLeave, PageParams, Paged, UpdateLeave},
 };
@@ -88,19 +87,6 @@ async fn act(
     body: Option<Json<CommentBody>>,
 ) -> ApiResult<Json<LeaveRequest>> {
     let comment = body.and_then(|Json(b)| b.comment);
-
-    match action {
-        Action::Approve if !p.has_permission("leave:approve") => {
-            return Err(DomainError::Forbidden.into());
-        }
-        Action::Reject if !p.has_permission("leave:reject") => {
-            return Err(DomainError::Forbidden.into());
-        }
-        Action::RequestChanges if !p.has_permission("leave:request_changes") => {
-            return Err(DomainError::Forbidden.into());
-        }
-        _ => {}
-    }
 
     Ok(Json(
         service::leave::transition(&core, &p, id, action, comment).await?,

@@ -45,7 +45,7 @@ impl TestApp {
             phone_key: [7u8; 32],
             session_ttl_hours: 1,
             sms_max_attempts: 3,
-            cors_allowed_origins: vec!["http://localhost:5173".into()],
+            cors_allowed_origins: vec!["http://localhost:5174".into()],
             trust_proxy_headers: false,
             login_rate_limit_per_minute,
             password_reset_rate_limit_per_minute,
