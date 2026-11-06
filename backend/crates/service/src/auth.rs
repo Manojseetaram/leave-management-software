@@ -204,9 +204,27 @@ pub async fn forgot_password(
     )
     .await?;
 
-    // There is no configured email adapter yet. The token is intentionally not
-    // logged or persisted in plaintext. Local development can opt in to receive
-    // it in the response; production must add an out-of-band delivery adapter.
+    // Deliver the recovery token out-of-band. The mock adapter records it in
+    // memory; the SMTP adapter sends it by email. The token is never logged.
+    let base = core
+        .settings
+        .app_base_url
+        .clone()
+        .unwrap_or_else(|| "http://localhost:5173".to_string());
+    let body = format!(
+        "A password reset was requested for your account.\n\n\
+         Reset token: {token}\n\n\
+         You can also open: {base}/reset-password?token={token}\n\n\
+         This link expires at {expires_at}. If you did not request this, ignore this message."
+    );
+    if let Err(err) = core
+        .email
+        .send(&email, "Password reset request", &body)
+        .await
+    {
+        tracing::warn!("password reset email delivery failed: {err}");
+    }
+
     Ok(ForgotPasswordOutput {
         token: core.settings.password_reset_expose_token.then_some(token),
         expires_at: Some(expires_at),

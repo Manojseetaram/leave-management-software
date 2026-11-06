@@ -49,6 +49,19 @@ async fn run() -> Result<(), String> {
         );
     }
 
+    let storage: Arc<dyn service::storage::PrivateStorage> = match cfg.storage_backend.as_str() {
+        "s3" => Arc::new(
+            service::storage::S3PrivateStorage::from_env()
+                .await
+                .map_err(|e| format!("storage: {e}"))?,
+        ),
+        _ => Arc::new(service::storage::LocalPrivateStorage::new(
+            cfg.storage_dir.clone(),
+        )),
+    };
+
+    let email = service::email::sender_from_env().map_err(|e| format!("email: {e}"))?;
+
     let core = Core::new(
         pool,
         Settings {
@@ -62,11 +75,15 @@ async fn run() -> Result<(), String> {
             password_reset_token_ttl_minutes: cfg.password_reset_token_ttl_minutes,
             password_reset_expose_token: cfg.password_reset_expose_token,
             storage_dir: cfg.storage_dir,
+            storage_backend: cfg.storage_backend.clone(),
             max_upload_bytes: cfg.max_upload_bytes,
             sms_webhook_secret: cfg.sms_webhook_secret,
             sms_provider: cfg.sms_provider.clone(),
+            app_base_url: cfg.app_base_url.clone(),
         },
         sms,
+        storage,
+        email,
     );
 
     if let (Some(email), Some(password)) =

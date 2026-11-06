@@ -5,6 +5,7 @@ pub mod auth;
 pub mod context;
 pub mod crypto;
 pub mod documents;
+pub mod email;
 pub mod events;
 pub mod faculty;
 pub mod leave;

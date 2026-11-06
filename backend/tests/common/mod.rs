@@ -8,7 +8,9 @@ use http_body_util::BodyExt;
 use serde_json::{json, Value};
 use service::{
     context::{Core, Settings},
+    email::MockEmailSender,
     notifications::MockSmsProvider,
+    storage::LocalPrivateStorage,
 };
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -52,11 +54,15 @@ impl TestApp {
             password_reset_token_ttl_minutes: 30,
             password_reset_expose_token: true,
             storage_dir: std::env::temp_dir().join(format!("leave-test-{}", Uuid::new_v4())),
+            storage_backend: "local".into(),
             max_upload_bytes: 10 * 1024 * 1024,
+            app_base_url: Some("http://localhost:5173".into()),
             sms_webhook_secret: Some("test-webhook-secret".into()),
             sms_provider: "mock".into(),
         };
-        let core = Core::new(pool, settings, sms.clone());
+        let storage = std::sync::Arc::new(LocalPrivateStorage::new(settings.storage_dir.clone()));
+        let email = std::sync::Arc::new(MockEmailSender::new());
+        let core = Core::new(pool, settings, sms.clone(), storage, email);
         assert!(
             service::users::bootstrap_admin(&core, ADMIN_EMAIL, ADMIN_PASSWORD, "Dept Admin")
                 .await

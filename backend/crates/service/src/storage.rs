@@ -86,6 +86,92 @@ impl PrivateStorage for LocalPrivateStorage {
     }
 }
 
+/// S3 (or any S3-compatible) object storage adapter. Credentials and region
+/// come from the standard AWS environment variables / instance profile, and
+/// the bucket name comes from `S3_BUCKET`.
+pub struct S3PrivateStorage {
+    client: aws_sdk_s3::Client,
+    bucket: String,
+    prefix: Option<String>,
+}
+
+impl S3PrivateStorage {
+    pub async fn from_env() -> Result<Self, String> {
+        let bucket = std::env::var("S3_BUCKET")
+            .map_err(|_| "S3_BUCKET is required when STORAGE_BACKEND=s3".to_string())?;
+        if bucket.trim().is_empty() {
+            return Err("S3_BUCKET must not be empty".into());
+        }
+        let prefix = std::env::var("S3_PREFIX")
+            .ok()
+            .filter(|v| !v.trim().is_empty());
+        let config = aws_config::load_from_env().await;
+        let client = aws_sdk_s3::Client::new(&config);
+        Ok(Self {
+            client,
+            bucket,
+            prefix,
+        })
+    }
+
+    fn object_key(&self, key: &str) -> Result<String, String> {
+        if !safe_storage_key(key) {
+            return Err("invalid storage key".into());
+        }
+        Ok(match &self.prefix {
+            Some(prefix) => format!("{}/{}", prefix.trim_end_matches('/'), key),
+            None => key.to_string(),
+        })
+    }
+}
+
+#[async_trait]
+impl PrivateStorage for S3PrivateStorage {
+    async fn put(&self, key: &str, bytes: &[u8]) -> Result<(), String> {
+        let object_key = self.object_key(key)?;
+        self.client
+            .put_object()
+            .bucket(&self.bucket)
+            .key(object_key)
+            .body(aws_sdk_s3::primitives::ByteStream::from(bytes.to_vec()))
+            .send()
+            .await
+            .map_err(|e| format!("s3 put: {e}"))?;
+        Ok(())
+    }
+
+    async fn get(&self, key: &str) -> Result<Vec<u8>, String> {
+        let object_key = self.object_key(key)?;
+        let resp = self
+            .client
+            .get_object()
+            .bucket(&self.bucket)
+            .key(object_key)
+            .send()
+            .await
+            .map_err(|e| format!("s3 get: {e}"))?;
+        let bytes = resp
+            .body
+            .collect()
+            .await
+            .map_err(|e| format!("s3 read body: {e}"))?
+            .into_bytes();
+        Ok(bytes.to_vec())
+    }
+
+    async fn delete(&self, key: &str) -> Result<(), String> {
+        let object_key = self.object_key(key)?;
+        self.client
+            .delete_object()
+            .bucket(&self.bucket)
+            .key(object_key)
+            .send()
+            .await
+            .map_err(|e| format!("s3 delete: {e}"))?;
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScanVerdict {
     Clean,

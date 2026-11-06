@@ -3,6 +3,7 @@ import { request } from './client'
 import type { ListParams, Paged } from '../types/api'
 import type { LeaveRequest } from '../types/leave'
 import type {
+  BulkImportResult,
   CreatedStudent,
   NewStudent,
   ParentContact,
@@ -28,6 +29,10 @@ export const show = (id: string) => request<StudentRecord>(`/students/${id}`)
 /** POST /students — the temporary password is returned exactly once. */
 export const create = (body: NewStudent) =>
   request<CreatedStudent>('/students', { method: 'POST', body })
+
+/** POST /students/import — bulk import up to 500 students (HOD/admin only). */
+export const importStudents = (body: { students: NewStudent[]; dry_run?: boolean }) =>
+  request<BulkImportResult>('/students/import', { method: 'POST', body })
 
 /** PATCH /students/:id */
 export const update = (id: string, body: UpdateStudent) =>

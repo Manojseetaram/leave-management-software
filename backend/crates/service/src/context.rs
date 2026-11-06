@@ -1,6 +1,7 @@
 use crate::{
+    email::EmailSender,
     notifications::SmsProvider,
-    storage::{LocalPrivateStorage, MalwareScanner, MockMalwareScanner, PrivateStorage},
+    storage::{MalwareScanner, MockMalwareScanner, PrivateStorage},
 };
 use repository::PgPool;
 use std::{path::PathBuf, sync::Arc};
@@ -26,6 +27,8 @@ pub struct Settings {
     pub password_reset_expose_token: bool,
     /// Root of the private upload area for the local storage adapter.
     pub storage_dir: PathBuf,
+    /// `local` (default) or `s3`.
+    pub storage_backend: String,
     /// Hard upper bound enforced before any upload is written to disk.
     pub max_upload_bytes: usize,
     /// Shared secret used to verify SMS delivery callbacks. `None` disables
@@ -34,6 +37,8 @@ pub struct Settings {
     /// Name of the configured SMS adapter, used to reject callbacks aimed at a
     /// provider this deployment does not actually use.
     pub sms_provider: String,
+    /// Base URL of the frontend, used to build password-reset links in emails.
+    pub app_base_url: Option<String>,
 }
 
 /// Shared application context handed to every workflow.
@@ -43,18 +48,25 @@ pub struct Core {
     pub settings: Arc<Settings>,
     pub sms: Arc<dyn SmsProvider>,
     pub storage: Arc<dyn PrivateStorage>,
+    pub email: Arc<dyn EmailSender>,
     pub scanner: Arc<dyn MalwareScanner>,
 }
 
 impl Core {
-    pub fn new(pool: PgPool, settings: Settings, sms: Arc<dyn SmsProvider>) -> Self {
-        let storage = Arc::new(LocalPrivateStorage::new(settings.storage_dir.clone()));
+    pub fn new(
+        pool: PgPool,
+        settings: Settings,
+        sms: Arc<dyn SmsProvider>,
+        storage: Arc<dyn PrivateStorage>,
+        email: Arc<dyn EmailSender>,
+    ) -> Self {
         let scanner = Arc::new(MockMalwareScanner);
         Self {
             pool,
             settings: Arc::new(settings),
             sms,
             storage,
+            email,
             scanner,
         }
     }

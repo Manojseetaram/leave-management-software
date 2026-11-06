@@ -18,8 +18,10 @@ pub struct Config {
     pub password_reset_token_ttl_minutes: i64,
     pub password_reset_expose_token: bool,
     pub storage_dir: PathBuf,
+    pub storage_backend: String,
     pub max_upload_bytes: usize,
     pub sms_webhook_secret: Option<String>,
+    pub app_base_url: Option<String>,
 }
 
 fn required(name: &str) -> Result<String, String> {
@@ -103,9 +105,17 @@ impl Config {
         if storage_dir.as_os_str().is_empty() {
             return Err("STORAGE_DIR must not be empty".into());
         }
+        let storage_backend = env::var("STORAGE_BACKEND").unwrap_or_else(|_| "local".into());
+        if !matches!(storage_backend.as_str(), "local" | "s3") {
+            return Err("STORAGE_BACKEND must be 'local' or 's3'".into());
+        }
         let sms_webhook_secret = env::var("SMS_WEBHOOK_SECRET")
             .ok()
             .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty());
+        let app_base_url = env::var("APP_BASE_URL")
+            .ok()
+            .map(|v| v.trim().trim_end_matches('/').to_string())
             .filter(|v| !v.is_empty());
 
         Ok(Self {
@@ -124,8 +134,10 @@ impl Config {
             password_reset_token_ttl_minutes,
             password_reset_expose_token: parse_bool("PASSWORD_RESET_EXPOSE_TOKEN", false)?,
             storage_dir,
+            storage_backend,
             max_upload_bytes,
             sms_webhook_secret,
+            app_base_url,
         })
     }
 }
