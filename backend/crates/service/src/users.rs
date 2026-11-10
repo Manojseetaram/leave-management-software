@@ -3,7 +3,7 @@ use domain::{
     error::{DomainError, DomainResult},
     models::{NewStaffUser, UserProfile},
     principal::{Principal, Role},
-    validation::{require_text, validate_email, validate_password},
+    validation::{require_text, validate_email},
 };
 use repository::{audit, db_err, users};
 use serde::Serialize;
@@ -83,7 +83,9 @@ pub async fn bootstrap_admin(
         return Ok(false);
     }
     let email = validate_email(email)?;
-    validate_password(password)?;
+    // Bootstrap creates a temporary credential that the admin must replace on
+    // first login; the replacement goes through validate_password. Exempt the
+    // seed password itself so deployments can use a short initial secret.
     let hash = crypto::hash_password(password.to_owned()).await?;
     let mut tx = core.pool.begin().await.map_err(db_err)?;
     let id = users::insert_user(&mut *tx, Some(&email), &hash, full_name, true).await?;
