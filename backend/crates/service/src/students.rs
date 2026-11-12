@@ -4,8 +4,8 @@ use domain::{
     models::{LeaveRequest, NewStudent, PageParams, Paged, StudentRecord, UpdateStudent},
     principal::{Principal, Role},
     validation::{
-        normalize_indian_mobile, optional_text, require_text, validate_email, validate_register_number,
-        validate_semester,
+        normalize_indian_mobile, optional_text, require_text, validate_email,
+        validate_register_number, validate_semester,
     },
 };
 use repository::{audit, db_err, leave, parents, sessions, students, users};
@@ -106,15 +106,8 @@ pub async fn create(
             .parent_name
             .clone()
             .unwrap_or_else(|| format!("Parent of {}", validated.name));
-        let parent = parents::insert(
-            &mut *tx,
-            id,
-            &parent_name,
-            "parent",
-            &encrypted,
-            true,
-        )
-        .await?;
+        let parent =
+            parents::insert(&mut *tx, id, &parent_name, "parent", &encrypted, true).await?;
         parents::insert_consent_history(&mut *tx, parent.id, actor.user_id, "consent_given")
             .await?;
         parents::mark_verified(&mut *tx, parent.id).await?;

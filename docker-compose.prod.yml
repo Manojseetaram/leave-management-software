@@ -1,0 +1,16 @@
+services:
+  api:
+    build: ./backend
+    env_file: ./backend/.env
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+  web:
+    build: ./frontend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: "https://api.yourdomain.com"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
