@@ -136,7 +136,7 @@ impl PrivateStorage for S3PrivateStorage {
             .body(aws_sdk_s3::primitives::ByteStream::from(bytes.to_vec()))
             .send()
             .await
-            .map_err(|e| format!("s3 put: {e}"))?;
+            .map_err(|e| format!("s3 put: {e:?}"))?;
         Ok(())
     }
 
@@ -149,7 +149,7 @@ impl PrivateStorage for S3PrivateStorage {
             .key(object_key)
             .send()
             .await
-            .map_err(|e| format!("s3 get: {e}"))?;
+            .map_err(|e| format!("s3 get: {e:?}"))?;
         let bytes = resp
             .body
             .collect()
@@ -167,7 +167,7 @@ impl PrivateStorage for S3PrivateStorage {
             .key(object_key)
             .send()
             .await
-            .map_err(|e| format!("s3 delete: {e}"))?;
+            .map_err(|e| format!("s3 delete: {e:?}"))?;
         Ok(())
     }
 }
