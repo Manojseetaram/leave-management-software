@@ -31,7 +31,7 @@ export default function FacultyDashboard() {
   const pending = (leaves?.items ?? []).filter((r) => r.status === "pending").length;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       <h1 className="text-2xl font-semibold text-foreground">Faculty dashboard</h1>
       <div className="grid gap-4 md:grid-cols-2">
         <StatCard label="My students" value={students.length} icon={<Users size={20} />} color="bg-teal-500" />

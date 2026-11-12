@@ -27,7 +27,7 @@ export default function AdminDashboardPage() {
 
   const c = dashboard.counts;
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       <h1 className="text-2xl font-semibold text-foreground">Admin dashboard</h1>
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard label="Students" value={c.total_students} icon={<Users size={20} />} color="bg-violet-700" />

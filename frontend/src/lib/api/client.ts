@@ -118,12 +118,14 @@ export async function request<T = unknown>(
       clearCaches();
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("leave:signout", { detail: { reason: "expired" } }));
-        window.location.href = "/login?expired=1";
+        const expiredUrl = window.location.origin + "/login?expired=1";
+        window.location.href = expiredUrl;
       }
     } else if (response.status === 403 && error.code === "password_change_required") {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("leave:password-change-required"));
-        window.location.href = "/change-password";
+        const changePasswordUrl = window.location.origin + "/change-password";
+        window.location.href = changePasswordUrl;
       }
     }
     throw error;
@@ -160,12 +162,14 @@ export async function upload<T = unknown>(
       clearCaches();
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("leave:signout", { detail: { reason: "expired" } }));
-        window.location.href = "/login?expired=1";
+        const expiredUrl = window.location.origin + "/login?expired=1";
+        window.location.href = expiredUrl;
       }
     } else if (response.status === 403 && error.code === "password_change_required") {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("leave:password-change-required"));
-        window.location.href = "/change-password";
+        const changePasswordUrl = window.location.origin + "/change-password";
+        window.location.href = changePasswordUrl;
       }
     }
     throw error;
@@ -192,7 +196,8 @@ export async function download(
       clearCaches();
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("leave:signout", { detail: { reason: "expired" } }));
-        window.location.href = "/login?expired=1";
+        const expiredUrl = window.location.origin + "/login?expired=1";
+        window.location.href = expiredUrl;
       }
     }
     throw error;

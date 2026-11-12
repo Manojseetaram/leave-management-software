@@ -26,7 +26,7 @@ export default function StudentProfilePage() {
 
   if (loading) return <Loading />;
   return (
-    <div className="p-6 max-w-2xl space-y-4">
+    <div className="p-4 sm:p-6 max-w-2xl space-y-4">
       <h1 className="text-2xl font-semibold text-foreground">Profile</h1>
       <div className="app-card space-y-2">
         <p><span className="font-medium">Name:</span> {user?.full_name}</p>

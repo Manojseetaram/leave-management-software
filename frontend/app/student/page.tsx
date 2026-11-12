@@ -40,7 +40,7 @@ export default function StudentDashboard() {
   const completed = items.filter((r) => r.status === "completed").length;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">My dashboard</h1>
         <Link href="/student/requests/new" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">

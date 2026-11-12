@@ -36,7 +36,7 @@ export default function StudentRequestsPage() {
   }, [page, status]);
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-4 sm:p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">My requests</h1>
         <Link href="/student/requests/new" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
@@ -72,7 +72,7 @@ export default function StudentRequestsPage() {
       ) : (
         <>
           <div className="app-card overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
                   <th className="py-2">Type</th>

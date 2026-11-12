@@ -34,10 +34,11 @@ export default function FacultyStudentsPage() {
   }, [page]);
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-4 sm:p-6 space-y-4">
       <h1 className="text-2xl font-semibold text-foreground">Students</h1>
       <div className="flex gap-3 max-w-md">
         <Input
+          type="search"
           placeholder="Search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -61,7 +62,7 @@ export default function FacultyStudentsPage() {
       ) : (
         <>
           <div className="app-card overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
                   <th className="py-2">Register no.</th>

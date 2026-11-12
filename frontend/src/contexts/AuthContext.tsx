@@ -110,7 +110,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (k && k.startsWith("leave.")) keys.push(k);
       }
       keys.forEach((k) => window.localStorage.removeItem(k));
-      window.location.href = "/login";
+      const loginUrl = window.location.origin + "/login";
+      window.location.href = loginUrl;
     }
   }, [clear]);
 

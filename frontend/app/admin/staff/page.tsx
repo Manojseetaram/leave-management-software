@@ -40,11 +40,11 @@ export default function AdminStaffPage() {
   }
 
   return (
-    <div className="p-6 max-w-2xl space-y-4">
+    <div className="p-4 sm:p-6 max-w-2xl space-y-4">
       <h1 className="text-2xl font-semibold text-foreground">Staff accounts</h1>
       <form onSubmit={handleSubmit} className="app-card flex flex-col gap-4">
         <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <Input label="Full name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+        <Input label="Full name" type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
         <div>
           <p className="text-sm font-medium text-foreground mb-2">Roles</p>
           <div className="flex gap-3">

@@ -28,6 +28,7 @@ export default function StudentRequestDetailPage() {
   const [file, setFile] = useState<File | null>(null);
   const [docType, setDocType] = useState("other");
   const [uploading, setUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   async function load() {
     setLoading(true);
@@ -73,6 +74,7 @@ export default function StudentRequestDetailPage() {
       fd.append("document_type", docType);
       await documentApi.uploadForLeave(id, fd);
       setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       await load();
     } catch (e) {
       setError((e as { message?: string })?.message ?? "Upload failed");
@@ -90,7 +92,7 @@ export default function StudentRequestDetailPage() {
   const canReturn = req.status === "approved";
 
   return (
-    <div className="p-6 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-6 space-y-6 max-w-3xl">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Request detail</h1>
         <Badge status={req.status} />
@@ -117,9 +119,18 @@ export default function StudentRequestDetailPage() {
           </Button>
         )}
         {canReturn && (
-          <Button loading={acting} onClick={() => doAction(() => leaveApi.recordReturn(req.id, comment || undefined))}>
-            Record return
-          </Button>
+          <>
+            <Button loading={acting} onClick={() => doAction(() => leaveApi.recordReturn(req.id, comment || undefined))}>
+              Record return
+            </Button>
+            <Button
+              variant="outline"
+              loading={acting}
+              onClick={() => doAction(() => leaveApi.complete(req.id, comment || undefined))}
+            >
+              Mark completed
+            </Button>
+          </>
         )}
       </div>
       <div>
@@ -144,7 +155,11 @@ export default function StudentRequestDetailPage() {
               <option value="other">Other</option>
             </select>
           </div>
-          <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          />
           <Button type="submit" loading={uploading} disabled={!file}>
             Upload
           </Button>
@@ -206,8 +221,8 @@ export default function StudentRequestDetailPage() {
         confirmLabel="Withdraw"
         destructive
         loading={acting}
-        onConfirm={() => {
-          doAction(() => leaveApi.withdraw(req.id, comment || undefined));
+        onConfirm={async () => {
+          await doAction(() => leaveApi.withdraw(req.id, comment || undefined));
           setWithdrawOpen(false);
         }}
         onCancel={() => setWithdrawOpen(false)}

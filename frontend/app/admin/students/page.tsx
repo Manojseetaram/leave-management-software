@@ -73,6 +73,7 @@ export default function AdminStudentsPage() {
         admission_year: form.admission_year ? Number(form.admission_year) : null,
       });
       setCreated(res);
+      setCreateOpen(false);
       setForm({
         register_number: "",
         full_name: "",
@@ -123,13 +124,13 @@ export default function AdminStudentsPage() {
   }
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-4 sm:p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Students</h1>
         <Button onClick={() => setCreateOpen(true)}>Add student</Button>
       </div>
       <div className="flex flex-wrap gap-3 max-w-2xl">
-        <Input placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} />
+        <Input type="search" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} />
         <Select
           value={status}
           onChange={(e) => {
@@ -162,7 +163,7 @@ export default function AdminStudentsPage() {
       ) : (
         <>
           <div className="app-card overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
                   <th className="py-2">Register no.</th>
@@ -218,34 +219,44 @@ export default function AdminStudentsPage() {
         <form onSubmit={handleCreate} className="flex flex-col gap-3">
           <Input
             label="Register number"
+            type="text"
             value={form.register_number}
             onChange={(e) => setForm({ ...form, register_number: e.target.value })}
             required
           />
           <Input
             label="Full name"
+            type="text"
             value={form.full_name}
             onChange={(e) => setForm({ ...form, full_name: e.target.value })}
             required
           />
           <Input
             label="Email"
+            type="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
           <Input
             label="Semester"
+            type="number"
+            min={1}
+            max={12}
             value={form.semester}
             onChange={(e) => setForm({ ...form, semester: e.target.value })}
             required
           />
           <Input
             label="Section"
+            type="text"
             value={form.section}
             onChange={(e) => setForm({ ...form, section: e.target.value })}
           />
           <Input
             label="Admission year"
+            type="number"
+            min={2000}
+            max={2100}
             value={form.admission_year}
             onChange={(e) => setForm({ ...form, admission_year: e.target.value })}
           />

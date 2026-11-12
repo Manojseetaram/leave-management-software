@@ -32,7 +32,7 @@ export default function HodDashboard() {
   const approved = items.filter((r) => r.status === "approved").length;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       <h1 className="text-2xl font-semibold text-foreground">HOD dashboard</h1>
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard label="Pending review" value={pending} icon={<FileText size={20} />} color="bg-amber-500" />

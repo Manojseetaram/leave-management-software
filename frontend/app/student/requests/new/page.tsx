@@ -44,7 +44,7 @@ export default function NewRequestPage() {
   }
 
   return (
-    <div className="p-6 max-w-2xl">
+    <div className="p-4 sm:p-6 max-w-2xl">
       <h1 className="text-2xl font-semibold text-foreground mb-6">New leave / permission request</h1>
       <form className="app-card flex flex-col gap-4">
         <Select

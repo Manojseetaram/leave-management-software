@@ -35,7 +35,7 @@ export default function FacultyLeaveRequestsPage() {
   }, [page, status]);
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-4 sm:p-6 space-y-4">
       <h1 className="text-2xl font-semibold text-foreground">Leave requests</h1>
       <div className="max-w-xs">
         <Select
@@ -63,7 +63,7 @@ export default function FacultyLeaveRequestsPage() {
       ) : (
         <>
           <div className="app-card overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
                   <th className="py-2">Student</th>

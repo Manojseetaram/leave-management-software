@@ -34,7 +34,7 @@ export default function AdminHealthPage() {
   if (error) return <EmptyState title="Error" description={error} action={<Button onClick={load}>Retry</Button>} />;
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-4 sm:p-6 space-y-4">
       <h1 className="text-2xl font-semibold text-foreground">System health</h1>
       <div className="app-card space-y-2">
         <p><span className="font-medium">Liveness:</span> {live?.status ?? "—"}</p>
