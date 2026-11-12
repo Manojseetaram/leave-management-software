@@ -127,8 +127,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(me.user);
       setRoles(me.roles);
       setStudentId(me.student_id);
-    } catch {
-      clear();
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (status === 401) {
+        setToken(null);
+        clear();
+      }
+      // Keep the token on transient/network errors so a refresh does not
+      // silently log the user out.
     } finally {
       setLoading(false);
     }
