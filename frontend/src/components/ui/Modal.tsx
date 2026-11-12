@@ -13,20 +13,33 @@ export interface ModalProps {
 
 export function Modal({ open, onClose, title, children, className }: ModalProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  // Always call the latest onClose without re-running the focus effect
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     window.addEventListener("keydown", onKey);
+
     const prev = document.activeElement as HTMLElement | null;
-    ref.current?.focus();
+
+    // Only move focus to the dialog if nothing inside it (e.g. an autoFocus input) already has it
+    if (ref.current && !ref.current.contains(document.activeElement)) {
+      ref.current.focus();
+    }
+
     return () => {
       window.removeEventListener("keydown", onKey);
       prev?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Sora, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/src/contexts/AuthContext";
+import { Toaster } from "sonner";
 const sora = Sora({
   variable: "--font-sora",
   subsets: ["latin"],
@@ -19,20 +20,16 @@ export const metadata: Metadata = {
   description: "Leave and permission management for the ISE department.",
 };
 
-const themeInit = `(function(){try{var t=localStorage.getItem('leave.theme');var d=t==='dark'||(t===null&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
-
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      suppressHydrationWarning
       className={`${sora.variable} ${dmSans.variable} h-full antialiased`}
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
-      </head>
+      <head />
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <AuthProvider>{children}</AuthProvider>
+        <Toaster position="bottom-right" richColors closeButton />
       </body>
     </html>
   );

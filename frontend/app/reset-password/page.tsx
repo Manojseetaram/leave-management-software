@@ -6,11 +6,13 @@ import { authApi } from "@/src/lib/api/authApi";
 import { Input } from "@/src/components/ui/Input";
 import { Button } from "@/src/components/ui/Button";
 import { Loading } from "@/src/components/ui/Loading";
+import { toast } from "sonner";
+import { friendlyMessage } from "@/src/lib/errors";
 
 function ResetPasswordForm() {
   const params = useSearchParams();
   const router = useRouter();
-  const token = params.get("token") ?? "";
+  const [token, setToken] = useState(params.get("token") ?? "");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -31,22 +33,21 @@ function ResetPasswordForm() {
       setTimeout(() => router.replace("/login"), 1200);
     } catch (err) {
       const e = err as { message?: string };
-      setError(e?.message ?? "Reset failed");
+      const message = friendlyMessage(e); setError(message); toast.error(message);;
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (!token) {
-    return (
-      <div className="app-card">
-        <p className="text-sm text-destructive">Missing reset token.</p>
-      </div>
-    );
-  }
-
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <Input
+        label="Reset code from email"
+        type="text"
+        value={token}
+        onChange={(e) => setToken(e.target.value)}
+        required
+      />
       <Input
         label="New password"
         type="password"

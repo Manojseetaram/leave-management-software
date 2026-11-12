@@ -8,6 +8,8 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Badge } from "@/src/components/ui/Badge";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { Select } from "@/src/components/ui/Select";
+import { toast } from "sonner";
+import { friendlyMessage } from "@/src/lib/errors";
 
 export default function HodReportsPage() {
   const [report, setReport] = useState<LeaveReport | null>(null);
@@ -23,7 +25,7 @@ export default function HodReportsPage() {
       const res = await adminApi.leaveReport({ status: s || undefined, page: p, per_page: 20 });
       setReport(res);
     } catch (e) {
-      setError((e as { message?: string })?.message ?? "Failed to load");
+      const message = friendlyMessage(e); setError(message); toast.error(message);;
     } finally {
       setLoading(false);
     }

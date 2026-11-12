@@ -9,6 +9,8 @@ import { Badge } from "@/src/components/ui/Badge";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { Select } from "@/src/components/ui/Select";
 import Link from "next/link";
+import { toast } from "sonner";
+import { friendlyMessage } from "@/src/lib/errors";
 
 export default function StudentRequestsPage() {
   const [data, setData] = useState<Paged<LeaveRequest> | null>(null);
@@ -24,7 +26,7 @@ export default function StudentRequestsPage() {
       const res = await leaveApi.list({ status: s || undefined, page: p, per_page: 20 });
       setData(res);
     } catch (e) {
-      setError((e as { message?: string })?.message ?? "Failed to load");
+      const message = friendlyMessage(e); setError(message); toast.error(message);;
     } finally {
       setLoading(false);
     }

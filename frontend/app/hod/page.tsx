@@ -9,6 +9,8 @@ import { StatCard } from "@/src/components/ui/StatCard";
 import { Badge } from "@/src/components/ui/Badge";
 import { FileText } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
+import { friendlyMessage } from "@/src/lib/errors";
 
 export default function HodDashboard() {
   const [data, setData] = useState<Paged<LeaveRequest> | null>(null);
@@ -19,7 +21,7 @@ export default function HodDashboard() {
     leaveApi
       .list({ per_page: 50 })
       .then(setData)
-      .catch((e) => setError((e as { message?: string })?.message ?? "Failed to load"))
+      .catch((e) => { const message = friendlyMessage(e); setError(message); toast.error(message); })
       .finally(() => setLoading(false));
   }, []);
 

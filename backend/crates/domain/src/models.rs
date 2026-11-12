@@ -265,6 +265,10 @@ pub struct NewStudent {
     pub semester: i16,
     pub section: Option<String>,
     pub admission_year: Option<i16>,
+    #[serde(default)]
+    pub parent_name: Option<String>,
+    #[serde(default)]
+    pub parent_phone: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]

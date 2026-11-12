@@ -212,8 +212,7 @@ export interface NotificationAttempt {
   attempted_at: string;
 }
 
-export interface NotificationDetail {
-  notification: NotificationRecord;
+export interface NotificationDetail extends NotificationRecord {
   attempts: NotificationAttempt[];
 }
 
@@ -285,6 +284,8 @@ export interface NewStudent {
   semester: number;
   section?: string | null;
   admission_year?: number | null;
+  parent_name?: string | null;
+  parent_phone?: string | null;
 }
 
 export interface UpdateStudent {

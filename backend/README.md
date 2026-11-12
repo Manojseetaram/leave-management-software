@@ -48,3 +48,6 @@ forgot/reset-password (needs email delivery) · bulk student import · documents
 (private storage, malware scan, verification) · real SMS gateway adapter + signed delivery webhook ·
 rate limiting · dashboard/report endpoints · parent OTP verification (staff attestation for now) ·
 cookie sessions + CSRF (this build uses bearer tokens) · reversible (down) migrations.
+
+
+postgresql://neondb_owner:npg_RbrMmq13FIak@ep-morning-block-bbebvdyk.c-15.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require

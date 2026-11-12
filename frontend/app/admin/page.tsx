@@ -7,6 +7,8 @@ import { Loading } from "@/src/components/ui/Loading";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { StatCard } from "@/src/components/ui/StatCard";
 import { Users, FileText, Bell, FileCheck } from "lucide-react";
+import { toast } from "sonner";
+import { friendlyMessage } from "@/src/lib/errors";
 
 export default function AdminDashboardPage() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
@@ -17,7 +19,7 @@ export default function AdminDashboardPage() {
     adminApi
       .dashboard()
       .then(setDashboard)
-      .catch((e) => setError((e as { message?: string })?.message ?? "Failed to load"))
+      .catch((e) => { const message = friendlyMessage(e); setError(message); toast.error(message); })
       .finally(() => setLoading(false));
   }, []);
 

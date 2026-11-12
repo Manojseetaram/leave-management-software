@@ -3,7 +3,7 @@
 import React from "react";
 import { RoleGuard } from "@/src/components/shared/RoleGuard";
 import { RoleLayout } from "@/src/components/shared/RoleLayout";
-import { LayoutDashboard, Users, FileText, FileCheck, Bell, ScrollText, BarChart3, UserCog } from "lucide-react";
+import { LayoutDashboard, Users, FileText, FileCheck, Bell, BarChart3, UserCog } from "lucide-react";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
@@ -13,8 +13,6 @@ const navItems = [
   { href: "/admin/documents", label: "Documents", icon: <FileCheck size={18} /> },
   { href: "/admin/reports", label: "Reports", icon: <BarChart3 size={18} /> },
   { href: "/admin/notifications", label: "Notifications", icon: <Bell size={18} /> },
-  { href: "/admin/audit", label: "Audit log", icon: <ScrollText size={18} /> },
-  { href: "/admin/health", label: "System health", icon: <LayoutDashboard size={18} /> },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

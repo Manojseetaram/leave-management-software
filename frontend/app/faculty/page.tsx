@@ -9,6 +9,8 @@ import { StatCard } from "@/src/components/ui/StatCard";
 import { Badge } from "@/src/components/ui/Badge";
 import { Users, FileText } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
+import { friendlyMessage } from "@/src/lib/errors";
 
 export default function FacultyDashboard() {
   const [students, setStudents] = useState<FacultyStudent[]>([]);
@@ -21,7 +23,7 @@ export default function FacultyDashboard() {
       facultyApi.students({ per_page: 50 }).then((r) => setStudents(r.items ?? [])),
       facultyApi.leaveRequests({ per_page: 50 }).then(setLeaves),
     ])
-      .catch((e) => setError((e as { message?: string })?.message ?? "Failed to load"))
+      .catch((e) => { const message = friendlyMessage(e); setError(message); toast.error(message); })
       .finally(() => setLoading(false));
   }, []);
 

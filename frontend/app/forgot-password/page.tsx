@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { authApi } from "@/src/lib/api/authApi";
 import { Input } from "@/src/components/ui/Input";
 import { Button } from "@/src/components/ui/Button";
+import { toast } from "sonner";
+import { friendlyMessage } from "@/src/lib/errors";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -22,7 +24,7 @@ export default function ForgotPasswordPage() {
       if (res.reset_token) setToken(res.reset_token);
     } catch (err) {
       const e = err as { message?: string };
-      setError(e?.message ?? "Request failed");
+      const message = friendlyMessage(e); setError(message); toast.error(message);;
     } finally {
       setSubmitting(false);
     }

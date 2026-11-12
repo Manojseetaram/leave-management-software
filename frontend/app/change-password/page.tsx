@@ -7,6 +7,8 @@ import { authApi } from "@/src/lib/api/authApi";
 import { Input } from "@/src/components/ui/Input";
 import { Button } from "@/src/components/ui/Button";
 import { Loading } from "@/src/components/ui/Loading";
+import { toast } from "sonner";
+import { friendlyMessage } from "@/src/lib/errors";
 
 export default function ChangePasswordPage() {
   const { user, refresh } = useAuth();
@@ -33,7 +35,7 @@ export default function ChangePasswordPage() {
       router.replace("/");
     } catch (err) {
       const e = err as { message?: string };
-      setError(e?.message ?? "Failed to change password");
+      const message = friendlyMessage(e); setError(message); toast.error(message);;
     } finally {
       setSubmitting(false);
     }

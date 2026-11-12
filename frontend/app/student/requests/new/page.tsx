@@ -7,6 +7,8 @@ import { Input } from "@/src/components/ui/Input";
 import { Textarea } from "@/src/components/ui/Textarea";
 import { Select } from "@/src/components/ui/Select";
 import { Button } from "@/src/components/ui/Button";
+import { toast } from "sonner";
+import { friendlyMessage } from "@/src/lib/errors";
 
 export default function NewRequestPage() {
   const router = useRouter();
@@ -18,35 +20,63 @@ export default function NewRequestPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent, submitNow: boolean) {
-    e.preventDefault();
+  async function handleSubmit(submitNow: boolean) {
     setError(null);
+
+    if (!reason.trim()) {
+      setError("Reason is required");
+      return;
+    }
+
+    const startDate = new Date(startAt);
+    const endDate = new Date(endAt);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      setError("Start and end dates are required");
+      return;
+    }
+    if (endDate <= startDate) {
+      setError("End date must be after start date");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const created = await leaveApi.create({
         request_type: requestType,
-        reason,
-        destination: destination || null,
-        start_at: new Date(startAt).toISOString(),
-        end_at: new Date(endAt).toISOString(),
+        reason: reason.trim(),
+        destination: destination.trim() || null,
+        start_at: startDate.toISOString(),
+        end_at: endDate.toISOString(),
       });
       if (submitNow) {
         await leaveApi.submit(created.id);
       }
       router.replace(`/student/requests/${created.id}`);
     } catch (err) {
-      const e = err as { message?: string; fieldErrors?: Record<string, string[]> };
-      const fe = e.fieldErrors ? Object.values(e.fieldErrors).flat().join(", ") : "";
-      setError(fe || e?.message || "Failed to create request");
+      const apiErr = err as { message?: string; fieldErrors?: Record<string, string[]> };
+      const fe = apiErr.fieldErrors ? Object.values(apiErr.fieldErrors).flat().join(", ") : "";
+      const message = fe || friendlyMessage(err);
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-2xl">
-      <h1 className="text-2xl font-semibold text-foreground mb-6">New leave / permission request</h1>
-      <form className="app-card flex flex-col gap-4">
+    <div className="mx-auto w-full max-w-2xl p-4 sm:p-6">
+      <h1 className="mb-6 text-center text-2xl font-semibold text-foreground sm:text-left">
+        New leave / permission request
+      </h1>
+
+      <form
+        className="app-card flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSubmit(true);
+        }}
+      >
         <Select
           label="Request type"
           value={requestType}
@@ -58,18 +88,21 @@ export default function NewRequestPage() {
             { value: "other", label: "Other" },
           ]}
         />
+
         <Textarea
           label="Reason"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           required
         />
+
         <Input
           label="Destination"
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
         />
-        <div className="grid grid-cols-2 gap-4">
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             label="Start"
             type="datetime-local"
@@ -81,25 +114,25 @@ export default function NewRequestPage() {
             label="End"
             type="datetime-local"
             value={endAt}
+            min={startAt || undefined}
             onChange={(e) => setEndAt(e.target.value)}
             required
           />
         </div>
+
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <div className="flex gap-2">
+
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Button
             type="button"
             variant="outline"
-            loading={submitting}
-            onClick={(e) => handleSubmit(e as unknown as React.FormEvent, false)}
+            className="w-full sm:w-auto"
+            disabled={submitting}
+            onClick={() => handleSubmit(false)}
           >
             Save draft
           </Button>
-          <Button
-            type="button"
-            loading={submitting}
-            onClick={(e) => handleSubmit(e as unknown as React.FormEvent, true)}
-          >
+          <Button type="submit" className="w-full sm:w-auto" loading={submitting} disabled={submitting}>
             Submit
           </Button>
         </div>

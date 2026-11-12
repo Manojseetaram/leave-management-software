@@ -4,10 +4,11 @@ use domain::{
     models::{LeaveRequest, NewStudent, PageParams, Paged, StudentRecord, UpdateStudent},
     principal::{Principal, Role},
     validation::{
-        optional_text, require_text, validate_email, validate_register_number, validate_semester,
+        normalize_indian_mobile, optional_text, require_text, validate_email, validate_register_number,
+        validate_semester,
     },
 };
-use repository::{audit, db_err, leave, sessions, students, users};
+use repository::{audit, db_err, leave, parents, sessions, students, users};
 use serde::Serialize;
 use serde_json::json;
 use std::collections::HashSet;
@@ -35,6 +36,8 @@ struct ValidatedStudent {
     semester: i16,
     section: Option<String>,
     admission_year: Option<i16>,
+    parent_name: Option<String>,
+    parent_phone: Option<String>,
 }
 
 fn validate_new(input: &NewStudent) -> DomainResult<ValidatedStudent> {
@@ -50,6 +53,16 @@ fn validate_new(input: &NewStudent) -> DomainResult<ValidatedStudent> {
         semester: validate_semester(input.semester)?,
         section: optional_text("section", input.section.as_deref(), 10)?,
         admission_year: input.admission_year,
+        parent_name: input
+            .parent_name
+            .as_deref()
+            .filter(|v| !v.trim().is_empty())
+            .map(|v| v.trim().to_string()),
+        parent_phone: input
+            .parent_phone
+            .as_deref()
+            .filter(|v| !v.trim().is_empty())
+            .map(|v| v.trim().to_string()),
     })
 }
 
@@ -83,6 +96,30 @@ pub async fn create(
         validated.admission_year,
     )
     .await?;
+
+    // Link a parent/guardian contact (with verified consent) so SMS
+    // notifications can be delivered for this student.
+    if let Some(phone_raw) = validated.parent_phone.as_deref() {
+        let phone = normalize_indian_mobile(phone_raw)?;
+        let encrypted = crypto::encrypt(&core.settings.phone_key, &phone)?;
+        let parent_name = validated
+            .parent_name
+            .clone()
+            .unwrap_or_else(|| format!("Parent of {}", validated.name));
+        let parent = parents::insert(
+            &mut *tx,
+            id,
+            &parent_name,
+            "parent",
+            &encrypted,
+            true,
+        )
+        .await?;
+        parents::insert_consent_history(&mut *tx, parent.id, actor.user_id, "consent_given")
+            .await?;
+        parents::mark_verified(&mut *tx, parent.id).await?;
+    }
+
     audit::insert(
         &mut *tx,
         Some(actor.user_id),

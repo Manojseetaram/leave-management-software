@@ -7,6 +7,8 @@ import { Input } from "@/src/components/ui/Input";
 import { Button } from "@/src/components/ui/Button";
 import { Loading } from "@/src/components/ui/Loading";
 import Link from "next/link";
+import { toast } from "sonner";
+import { friendlyMessage } from "@/src/lib/errors";
 
 function LoginForm() {
   const { login, loading } = useAuth();
@@ -39,7 +41,7 @@ function LoginForm() {
       else router.replace("/");
     } catch (err) {
       const e = err as { message?: string };
-      setError(e?.message ?? "Login failed");
+      const message = friendlyMessage(e); setError(message); toast.error(message);;
     } finally {
       setSubmitting(false);
     }

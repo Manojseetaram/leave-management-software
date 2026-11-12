@@ -11,6 +11,8 @@ import { Select } from "@/src/components/ui/Select";
 import { Button } from "@/src/components/ui/Button";
 import { Textarea } from "@/src/components/ui/Textarea";
 import { Modal } from "@/src/components/ui/Modal";
+import { toast } from "sonner";
+import { friendlyMessage } from "@/src/lib/errors";
 
 export default function HodDocumentsPage() {
   const [data, setData] = useState<Paged<DocumentRecord> | null>(null);
@@ -22,6 +24,9 @@ export default function HodDocumentsPage() {
   const [verdict, setVerdict] = useState<"verified" | "rejected">("verified");
   const [notes, setNotes] = useState("");
   const [acting, setActing] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<DocumentRecord | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   async function load(p = page, s = status) {
     setLoading(true);
@@ -30,7 +35,7 @@ export default function HodDocumentsPage() {
       const res = await documentApi.listReview({ verification_status: s || undefined, page: p, per_page: 20 });
       setData(res);
     } catch (e) {
-      setError((e as { message?: string })?.message ?? "Failed to load");
+      const message = friendlyMessage(e); setError(message); toast.error(message);;
     } finally {
       setLoading(false);
     }
@@ -49,7 +54,7 @@ export default function HodDocumentsPage() {
       setSelected(null);
       await load(page, status);
     } catch (e) {
-      setError((e as { message?: string })?.message ?? "Action failed");
+      const message = friendlyMessage(e); setError(message); toast.error(message);;
     } finally {
       setActing(false);
     }
@@ -101,16 +106,57 @@ export default function HodDocumentsPage() {
                       <Badge status={d.verification_status} />
                     </td>
                     <td className="py-2">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setSelected(d);
-                          setVerdict("verified");
-                          setNotes("");
-                        }}
-                      >
-                        Review
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            setPreviewDoc(d);
+                            setPreviewLoading(true);
+                            setPreviewUrl(null);
+                            try {
+                              const { blob } = await documentApi.download(d.id);
+                              setPreviewUrl(URL.createObjectURL(blob));
+                            } catch (e) {
+                              const message = friendlyMessage(e); toast.error(message);
+                              setPreviewDoc(null);
+                            } finally {
+                              setPreviewLoading(false);
+                            }
+                          }}
+                        >
+                          Preview
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            try {
+                              const { blob, filename } = await documentApi.download(d.id);
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url;
+                              a.download = filename;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            } catch (e) {
+                              const message = friendlyMessage(e); toast.error(message);
+                            }
+                          }}
+                        >
+                          Download
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setSelected(d);
+                            setVerdict("verified");
+                            setNotes("");
+                          }}
+                        >
+                          Review
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -147,8 +193,47 @@ export default function HodDocumentsPage() {
               <Button variant="outline" onClick={() => setSelected(null)}>
                 Cancel
               </Button>
-              <Button loading={acting} onClick={perform}>
+              <Button
+                loading={acting}
+                disabled={acting || (verdict === "rejected" && !notes.trim())}
+                onClick={perform}
+              >
                 Submit
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!previewDoc}
+        onClose={() => {
+          if (previewUrl) URL.revokeObjectURL(previewUrl);
+          setPreviewUrl(null);
+          setPreviewDoc(null);
+        }}
+        title={previewDoc?.original_filename ?? "Preview"}
+      >
+        {previewDoc && (
+          <div className="space-y-3">
+            {previewLoading && <p className="text-muted-foreground">Loading preview…</p>}
+            {!previewLoading && previewUrl && previewDoc.content_type.startsWith("image/") && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={previewUrl} alt={previewDoc.original_filename} className="max-h-[70vh] w-full object-contain" />
+            )}
+            {!previewLoading && previewUrl && previewDoc.content_type === "application/pdf" && (
+              <iframe src={previewUrl} title={previewDoc.original_filename} className="h-[70vh] w-full rounded-lg border border-border" />
+            )}
+            {!previewLoading && previewUrl && !previewDoc.content_type.startsWith("image/") && previewDoc.content_type !== "application/pdf" && (
+              <p className="text-muted-foreground">Preview not available for this file type. Use Download.</p>
+            )}
+            <div className="flex justify-end">
+              <Button onClick={() => {
+                if (previewUrl) URL.revokeObjectURL(previewUrl);
+                setPreviewUrl(null);
+                setPreviewDoc(null);
+              }}>
+                Close
               </Button>
             </div>
           </div>

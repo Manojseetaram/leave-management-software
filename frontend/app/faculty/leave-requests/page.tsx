@@ -8,6 +8,8 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Badge } from "@/src/components/ui/Badge";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { Select } from "@/src/components/ui/Select";
+import { toast } from "sonner";
+import { friendlyMessage } from "@/src/lib/errors";
 
 export default function FacultyLeaveRequestsPage() {
   const [data, setData] = useState<Paged<FacultyLeaveRequest> | null>(null);
@@ -23,7 +25,7 @@ export default function FacultyLeaveRequestsPage() {
       const res = await facultyApi.leaveRequests({ status: s || undefined, page: p, per_page: 20 });
       setData(res);
     } catch (e) {
-      setError((e as { message?: string })?.message ?? "Failed to load");
+      const message = friendlyMessage(e); setError(message); toast.error(message);;
     } finally {
       setLoading(false);
     }

@@ -5,7 +5,7 @@ export const leaveApi = {
   create: (body: NewLeave) =>
     request<LeaveRequest>("/api/v1/leave-requests", { method: "POST", body }),
 
-  list: (params?: { status?: string; page?: number; per_page?: number }) =>
+  list: (params?: { status?: string; student_id?: string; page?: number; per_page?: number }) =>
     request<Paged<LeaveRequest>>("/api/v1/leave-requests", { query: params }),
 
   get: (id: string) => request<LeaveRequest>(`/api/v1/leave-requests/${id}`),

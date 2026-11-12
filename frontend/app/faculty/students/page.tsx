@@ -7,6 +7,9 @@ import { Loading } from "@/src/components/ui/Loading";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { Input } from "@/src/components/ui/Input";
+import { Search } from "lucide-react";
+import { toast } from "sonner";
+import { friendlyMessage } from "@/src/lib/errors";
 
 export default function FacultyStudentsPage() {
   const [data, setData] = useState<Paged<FacultyStudent> | null>(null);
@@ -22,7 +25,7 @@ export default function FacultyStudentsPage() {
       const res = await facultyApi.students({ q: query || undefined, page: p, per_page: 20 });
       setData(res);
     } catch (e) {
-      setError((e as { message?: string })?.message ?? "Failed to load");
+      const message = friendlyMessage(e); setError(message); toast.error(message);;
     } finally {
       setLoading(false);
     }
@@ -37,12 +40,22 @@ export default function FacultyStudentsPage() {
     <div className="p-4 sm:p-6 space-y-4">
       <h1 className="text-2xl font-semibold text-foreground">Students</h1>
       <div className="flex gap-3 max-w-md">
-        <Input
-          type="search"
-          placeholder="Search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search students…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                setPage(1);
+                load(1, q);
+              }
+            }}
+            className="pl-9"
+          />
+        </div>
         <button
           className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground"
           onClick={() => {

@@ -8,6 +8,8 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Badge } from "@/src/components/ui/Badge";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { Modal } from "@/src/components/ui/Modal";
+import { toast } from "sonner";
+import { friendlyMessage } from "@/src/lib/errors";
 
 export default function HodNotificationsPage() {
   const [data, setData] = useState<Paged<NotificationRecord> | null>(null);
@@ -23,7 +25,7 @@ export default function HodNotificationsPage() {
       const res = await notificationApi.list({ page: p, per_page: 20 });
       setData(res);
     } catch (e) {
-      setError((e as { message?: string })?.message ?? "Failed to load");
+      const message = friendlyMessage(e); setError(message); toast.error(message);;
     } finally {
       setLoading(false);
     }
@@ -39,7 +41,7 @@ export default function HodNotificationsPage() {
       const detail = await notificationApi.get(n.id);
       setSelected(detail);
     } catch (e) {
-      setError((e as { message?: string })?.message ?? "Failed to load detail");
+      const message = friendlyMessage(e); setError(message); toast.error(message);;
     }
   }
 
@@ -91,9 +93,9 @@ export default function HodNotificationsPage() {
       <Modal open={!!selected} onClose={() => setSelected(null)} title="Notification detail">
         {selected && (
           <div className="space-y-3 text-sm">
-            <p><span className="font-medium">Status:</span> {selected.notification.status}</p>
-            <p><span className="font-medium">Provider message id:</span> {selected.notification.provider_message_id ?? "—"}</p>
-            <p><span className="font-medium">Last error:</span> {selected.notification.last_error ?? "—"}</p>
+            <p><span className="font-medium">Status:</span> {selected.status}</p>
+            <p><span className="font-medium">Provider message id:</span> {selected.provider_message_id ?? "—"}</p>
+            <p><span className="font-medium">Last error:</span> {selected.last_error ?? "—"}</p>
             <h3 className="font-semibold">Attempts</h3>
             {selected.attempts.length === 0 ? (
               <p className="text-muted-foreground">No attempts recorded.</p>
